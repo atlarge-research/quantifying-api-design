@@ -115,3 +115,9 @@ gradle-app.setting
 
 # Cache of project
 .gradletasknamecache
+
+# experiments traces
+opendc-experiments/oversubscription/src/main/resources/trace
+opendc-experiments/oversubscription/output
+opendc-experiments/reservation/src/main/resources/trace
+opendc-experiments/reservation/output

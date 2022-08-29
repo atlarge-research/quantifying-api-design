@@ -31,7 +31,7 @@ import java.util.*
 /**
  * A [ComputeWorkload] that samples multiple workloads based on the total load of all workloads.
  */
-internal class CompositeComputeWorkload(val sources: Map<ComputeWorkload, Double>) : ComputeWorkload {
+internal class CompositeComputeWorkload(val sources: Map<ComputeWorkload, Double>, override val name: String = "") : ComputeWorkload {
     /**
      * The logging instance of this class.
      */

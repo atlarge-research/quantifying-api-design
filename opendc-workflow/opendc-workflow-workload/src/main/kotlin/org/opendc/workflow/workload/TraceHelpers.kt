@@ -24,6 +24,7 @@
 package org.opendc.workflow.workload
 
 import org.opendc.simulator.compute.workload.SimFlopsWorkload
+import org.opendc.simulator.compute.workload.SimRuntimeWorkload
 import org.opendc.trace.*
 import org.opendc.workflow.api.Job
 import org.opendc.workflow.api.Task
@@ -59,7 +60,7 @@ public fun Trace.toJobs(): List<Job> {
             val submitTime = reader.get(TASK_SUBMIT_TIME)
             val runtime = reader.get(TASK_RUNTIME)
             val flops: Long = 4000 * runtime.seconds * grantedCpus
-            val workload = SimFlopsWorkload(flops)
+            val workload = SimRuntimeWorkload(runtime.toMillis())
             val task = Task(
                 UUID(0L, id),
                 "<unnamed>",

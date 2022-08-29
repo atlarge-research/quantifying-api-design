@@ -66,9 +66,9 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
 
         return when (index) {
             COL_ID -> record[AVRO_COL_ID].toString()
-            COL_START_TIME -> Instant.ofEpochMilli(record[AVRO_COL_START_TIME] as Long)
-            COL_STOP_TIME -> Instant.ofEpochMilli(record[AVRO_COL_STOP_TIME] as Long)
-            COL_CPU_COUNT -> getInt(index)
+            COL_START_TIME -> Instant.ofEpochMilli((record[AVRO_COL_START_TIME] as Long))
+            COL_STOP_TIME -> Instant.ofEpochMilli((record[AVRO_COL_STOP_TIME] as Long))
+            COL_CPU_COUNT -> getLong(index)
             COL_CPU_CAPACITY -> getDouble(index)
             COL_MEM_CAPACITY -> getDouble(index)
             else -> throw IllegalArgumentException("Invalid column")
@@ -89,7 +89,12 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
     }
 
     override fun getLong(index: Int): Long {
-        throw IllegalArgumentException("Invalid column")
+        val record = checkNotNull(record) { "Reader in invalid state" }
+
+        return when (index) {
+            COL_CPU_COUNT -> record[AVRO_COL_CPU_COUNT] as Long
+            else -> throw IllegalArgumentException("Invalid column")
+        }
     }
 
     override fun getDouble(index: Int): Double {
@@ -97,6 +102,7 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
 
         return when (index) {
             COL_CPU_CAPACITY -> if (AVRO_COL_CPU_CAPACITY >= 0) (record[AVRO_COL_CPU_CAPACITY] as Number).toDouble() else 0.0
+            COL_CPU_UTILIZATION -> if (AVRO_COL_CPU_UTILIZATION >= 0) (record[AVRO_COL_CPU_UTILIZATION] as Number).toDouble() else -1.0
             COL_MEM_CAPACITY -> (record[AVRO_COL_MEM_CAPACITY] as Number).toDouble()
             else -> throw IllegalArgumentException("Invalid column")
         }
@@ -118,6 +124,7 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
             AVRO_COL_STOP_TIME = (schema.getField("stop_time") ?: schema.getField("endTime")).pos()
             AVRO_COL_CPU_COUNT = (schema.getField("cpu_count") ?: schema.getField("maxCores")).pos()
             AVRO_COL_CPU_CAPACITY = schema.getField("cpu_capacity")?.pos() ?: -1
+            AVRO_COL_CPU_UTILIZATION = schema.getField("cpu_utilization")?.pos() ?: -1
             AVRO_COL_MEM_CAPACITY = (schema.getField("mem_capacity") ?: schema.getField("requiredMemory")).pos()
         } catch (e: NullPointerException) {
             // This happens when the field we are trying to access does not exist
@@ -130,6 +137,7 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
     private var AVRO_COL_STOP_TIME = -1
     private var AVRO_COL_CPU_COUNT = -1
     private var AVRO_COL_CPU_CAPACITY = -1
+    private var AVRO_COL_CPU_UTILIZATION = -1
     private var AVRO_COL_MEM_CAPACITY = -1
 
     private val COL_ID = 0
@@ -138,6 +146,7 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
     private val COL_CPU_COUNT = 3
     private val COL_CPU_CAPACITY = 4
     private val COL_MEM_CAPACITY = 5
+    private val COL_CPU_UTILIZATION = 6
 
     private val columns = mapOf(
         RESOURCE_ID to COL_ID,
@@ -146,5 +155,6 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
         RESOURCE_CPU_COUNT to COL_CPU_COUNT,
         RESOURCE_CPU_CAPACITY to COL_CPU_CAPACITY,
         RESOURCE_MEM_CAPACITY to COL_MEM_CAPACITY,
+        RESOURCE_CPU_UTILIZATION to COL_CPU_UTILIZATION,
     )
 }

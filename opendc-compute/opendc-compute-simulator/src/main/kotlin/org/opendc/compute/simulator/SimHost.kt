@@ -158,7 +158,9 @@ public class SimHost(
         meter.gaugeBuilder("system.cpu.utilization")
             .setDescription("Utilization of the CPU resources of the host")
             .setUnit("%")
-            .buildWithCallback { result -> result.record(hypervisor.cpuUsage / _cpuLimit) }
+            .buildWithCallback {result -> result.record(
+                hypervisor.cpuUsage / _cpuLimit
+            )}
         meter.counterBuilder("system.cpu.time")
             .setDescription("Amount of CPU time spent by the host")
             .setUnit("s")
@@ -330,7 +332,7 @@ public class SimHost(
      */
     private fun Flavor.toMachineModel(): MachineModel {
         val originalCpu = machine.model.cpus[0]
-        val cpuCapacity = (this.meta["cpu-capacity"] as? Double ?: Double.MAX_VALUE).coerceAtMost(originalCpu.frequency)
+        val cpuCapacity = ((this.meta["cpu-capacity"] as? Double ?: Double.MAX_VALUE) / this.cpuCount).coerceAtMost(originalCpu.frequency)
         val processingNode = originalCpu.node.copy(coreCount = cpuCount)
         val processingUnits = (0 until cpuCount).map { originalCpu.copy(id = it, node = processingNode, frequency = cpuCapacity) }
         val memoryUnits = listOf(MemoryUnit("Generic", "Generic", 3200.0, memorySize))

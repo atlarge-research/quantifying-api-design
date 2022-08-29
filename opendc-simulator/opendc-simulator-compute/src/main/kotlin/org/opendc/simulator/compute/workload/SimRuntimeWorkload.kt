@@ -25,6 +25,8 @@ package org.opendc.simulator.compute.workload
 import org.opendc.simulator.compute.SimMachineContext
 import org.opendc.simulator.flow.source.FixedFlowSource
 
+public var i : Int = 0
+public var j : Int = 0
 /**
  * A [SimWorkload] that models application execution as a single duration.
  *
@@ -33,7 +35,8 @@ import org.opendc.simulator.flow.source.FixedFlowSource
  */
 public class SimRuntimeWorkload(
     public val duration: Long,
-    public val utilization: Double = 0.8
+    public val utilization: Double = 0.8,
+    public val name: String = ""
 ) : SimWorkload {
     init {
         require(duration >= 0) { "Duration must be non-negative" }
@@ -41,14 +44,19 @@ public class SimRuntimeWorkload(
     }
 
     override fun onStart(ctx: SimMachineContext) {
+        i++
+        println("i " + i)
         val lifecycle = SimWorkloadLifecycle(ctx)
         for (cpu in ctx.cpus) {
             val limit = cpu.capacity * utilization
-            cpu.startConsumer(lifecycle.waitFor(FixedFlowSource((limit / 1000) * duration, utilization)))
+            cpu.startConsumer(lifecycle.waitFor(FixedFlowSource((limit / 1000) * duration, utilization, name)))
         }
     }
 
-    override fun onStop(ctx: SimMachineContext) {}
+    override fun onStop(ctx: SimMachineContext) {
+        j++
+        println("j " + j)
+    }
 
     override fun toString(): String = "SimRuntimeWorkload(duration=$duration,utilization=$utilization)"
 }

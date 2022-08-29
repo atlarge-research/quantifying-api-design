@@ -94,6 +94,7 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
         val stopTimeCol = reader.resolve(RESOURCE_STOP_TIME)
         val cpuCountCol = reader.resolve(RESOURCE_CPU_COUNT)
         val cpuCapacityCol = reader.resolve(RESOURCE_CPU_CAPACITY)
+        val cpuUtilizationCol = reader.resolve(RESOURCE_CPU_UTILIZATION)
         val memCol = reader.resolve(RESOURCE_MEM_CAPACITY)
 
         var counter = 0
@@ -111,6 +112,7 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
                 val endTime = reader.get(stopTimeCol) as Instant
                 val cpuCount = reader.getInt(cpuCountCol)
                 val cpuCapacity = reader.getDouble(cpuCapacityCol)
+                val cpuUtilization = reader.getDouble(cpuUtilizationCol)
                 val memCapacity = reader.getDouble(memCol) / 1000.0 // Convert from KB to MB
                 val uid = UUID.nameUUIDFromBytes("$id-${counter++}".toByteArray())
 
@@ -127,7 +129,8 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
                         totalLoad,
                         submissionTime,
                         endTime,
-                        builder.build()
+                        builder.build(),
+                        cpuUtilization
                     )
                 )
             }

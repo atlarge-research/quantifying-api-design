@@ -1,0 +1,2 @@
+ClusterID;ClusterName;Cores;Speed;Memory;numberOfHosts;memoryCapacityPerHost;coreCountPerHost
+K01;K01;48;2.93;1256;50;256;32

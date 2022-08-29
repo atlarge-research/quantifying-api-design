@@ -58,6 +58,7 @@ public class ParquetHostDataWriter(path: File, bufferSize: Int) :
 
         builder["cpu_count"] = data.host.cpuCount
         builder["cpu_limit"] = data.cpuLimit
+        builder["cpu_utilization"] = data.cpuUtilization
         builder["cpu_time_active"] = data.cpuActiveTime
         builder["cpu_time_idle"] = data.cpuIdleTime
         builder["cpu_time_steal"] = data.cpuStealTime
@@ -87,6 +88,7 @@ public class ParquetHostDataWriter(path: File, bufferSize: Int) :
             .name("boot_time").type(TIMESTAMP_SCHEMA.optional()).noDefault()
             .requiredInt("cpu_count")
             .requiredDouble("cpu_limit")
+            .requiredDouble("cpu_utilization")
             .requiredLong("cpu_time_active")
             .requiredLong("cpu_time_idle")
             .requiredLong("cpu_time_steal")

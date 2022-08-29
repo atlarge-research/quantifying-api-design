@@ -50,7 +50,7 @@ public class ParquetServerDataWriter(path: File, bufferSize: Int) :
     override fun convert(builder: GenericRecordBuilder, data: ServerTableReader) {
         builder["timestamp"] = data.timestamp.toEpochMilli()
 
-        builder["server_id"] = data.server.id
+        builder["server_id"] = data.server.name
         builder["host_id"] = data.host?.id
 
         builder["uptime"] = data.uptime

@@ -31,7 +31,7 @@ import java.util.*
 /**
  * A [ComputeWorkload] that is sampled based on total load.
  */
-internal class LoadSampledComputeWorkload(val source: ComputeWorkload, val fraction: Double) : ComputeWorkload {
+internal class LoadSampledComputeWorkload(val source: ComputeWorkload, val fraction: Double, override val name: String = source.name) : ComputeWorkload {
     /**
      * The logging instance of this class.
      */

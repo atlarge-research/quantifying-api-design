@@ -122,10 +122,10 @@ internal class TraceConverterCli : CliktCommand(name = "trace-converter") {
         logger.info { "Wrote ${selectedVms.size} rows" }
         logger.info { "Building resource states table" }
 
-        val writer = outputTrace.getTable(TABLE_RESOURCE_STATES)!!.newWriter()
+        /*val writer = outputTrace.getTable(TABLE_RESOURCE_STATES)!!.newWriter()
 
         val statesCount = writer.use { converter.convertResourceStates(inputTrace, it, selectedVms) }
-        logger.info { "Wrote $statesCount rows" }
+        logger.info { "Wrote $statesCount rows" }*/
     }
 
     /**
@@ -207,7 +207,7 @@ internal class TraceConverterCli : CliktCommand(name = "trace-converter") {
         override fun convertResources(trace: Trace, writer: TableWriter, samplingOptions: SamplingOptions?): Map<String, Resource> {
             val random = samplingOptions?.let { Random(it.seed) }
             val samplingFraction = samplingOptions?.fraction ?: 1.0
-            val reader = checkNotNull(trace.getTable(TABLE_RESOURCE_STATES)).newReader()
+            val reader = checkNotNull(trace.getTable(TABLE_RESOURCES)).newReader()
 
             var hasNextRow = reader.nextRow()
             val selectedVms = mutableMapOf<String, Resource>()

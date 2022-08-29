@@ -47,6 +47,7 @@ internal class InternalServer(
      */
     private val logger = KotlinLogging.logger {}
 
+
     /**
      * The watchers of this server object.
      */
@@ -98,7 +99,7 @@ internal class InternalServer(
             }
             else -> {
                 logger.info { "User requested to start server $uid" }
-                state = ServerState.PROVISIONING
+                 state = ServerState.PROVISIONING
                 assert(request == null) { "Scheduling request already active" }
                 request = service.schedule(this)
             }

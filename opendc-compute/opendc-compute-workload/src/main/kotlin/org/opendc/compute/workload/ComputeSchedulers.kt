@@ -38,9 +38,7 @@ import java.util.*
 /**
  * Create a [ComputeScheduler] for the experiment.
  */
-public fun createComputeScheduler(name: String, seeder: Random, placements: Map<String, String> = emptyMap()): ComputeScheduler {
-    val cpuAllocationRatio = 16.0
-    val ramAllocationRatio = 1.5
+public fun createComputeScheduler(name: String, seeder: Random, placements: Map<String, String> = emptyMap(), cpuAllocationRatio: Double = 16.0, ramAllocationRatio: Double = 1.5): ComputeScheduler {
     return when (name) {
         "mem" -> FilterScheduler(
             filters = listOf(ComputeFilter(), VCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),

@@ -34,7 +34,7 @@ import java.util.*
  * @param fraction The fraction of load/virtual machines to sample
  * @param sampleLoad A flag to indicate that the sampling should be based on the total load or on the number of VMs.
  */
-internal class HpcSampledComputeWorkload(val source: ComputeWorkload, val fraction: Double, val sampleLoad: Boolean = false) : ComputeWorkload {
+internal class HpcSampledComputeWorkload(val source: ComputeWorkload, val fraction: Double, val sampleLoad: Boolean = false, override val name: String = "") : ComputeWorkload {
     /**
      * The logging instance of this class.
      */

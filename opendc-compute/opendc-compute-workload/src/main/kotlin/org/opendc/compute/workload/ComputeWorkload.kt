@@ -28,6 +28,7 @@ import java.util.*
  * An interface that describes how a workload is resolved.
  */
 public interface ComputeWorkload {
+    public val name: String
     /**
      * Resolve the workload into a list of [VirtualMachine]s to simulate.
      */

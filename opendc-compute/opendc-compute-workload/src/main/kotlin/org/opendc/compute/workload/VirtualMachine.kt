@@ -48,4 +48,5 @@ public data class VirtualMachine(
     val startTime: Instant,
     val stopTime: Instant,
     val trace: SimTrace,
+    val cpuUtilization: Double = -1.0,
 )

@@ -58,6 +58,8 @@ internal class ComputeServiceImpl(
     private val scheduler: ComputeScheduler,
     schedulingQuantum: Duration
 ) : ComputeService, HostListener {
+
+    public override val views: MutableMap<UUID, HostView> = mutableMapOf<UUID, HostView>()
     /**
      * The [CoroutineScope] of the service bounded by the lifecycle of the service.
      */
@@ -91,7 +93,7 @@ internal class ComputeServiceImpl(
     /**
      * The servers that should be launched by the service.
      */
-    private val queue: Deque<SchedulingRequest> = ArrayDeque()
+    private var queue: Deque<SchedulingRequest> = ArrayDeque()
 
     /**
      * The active servers in the system.
@@ -366,11 +368,11 @@ internal class ComputeServiceImpl(
      * Run a single scheduling iteration.
      */
     private fun doSchedule(now: Long) {
+        val newQueue : Deque<SchedulingRequest> = ArrayDeque()
         while (queue.isNotEmpty()) {
-            val request = queue.peek()
+            val request = queue.poll()
 
             if (request.isCancelled) {
-                queue.poll()
                 _servers.add(-1, _serversPendingAttr)
                 continue
             }
@@ -382,7 +384,6 @@ internal class ComputeServiceImpl(
 
                 if (server.flavor.memorySize > maxMemory || server.flavor.cpuCount > maxCores) {
                     // Remove the incoming image
-                    queue.poll()
                     _servers.add(-1, _serversPendingAttr)
                     _schedulingAttempts.add(1, _schedulingAttemptsFailureAttr)
 
@@ -391,14 +392,14 @@ internal class ComputeServiceImpl(
                     server.state = ServerState.TERMINATED
                     continue
                 } else {
-                    break
+                    newQueue.add(request)
+                    continue
                 }
             }
 
             val host = hv.host
 
-            // Remove request from queue
-            queue.poll()
+            // Remove request from pendings
             _servers.add(-1, _serversPendingAttr)
             _schedulingLatency.record(now - request.submitTime, server.attributes)
 
@@ -413,6 +414,7 @@ internal class ComputeServiceImpl(
             scope.launch {
                 try {
                     server.host = host
+                    views[server.uid] = hv
                     host.spawn(server)
                     activeServers[server] = host
 
@@ -429,6 +431,7 @@ internal class ComputeServiceImpl(
                 }
             }
         }
+        queue = newQueue
     }
 
     /**
@@ -489,6 +492,7 @@ internal class ComputeServiceImpl(
                 hv.provisionedCores -= server.flavor.cpuCount
                 hv.instanceCount--
                 hv.availableMemory += server.flavor.memorySize
+                views.remove(server.uid)
             } else {
                 logger.error { "Unknown host $host" }
             }

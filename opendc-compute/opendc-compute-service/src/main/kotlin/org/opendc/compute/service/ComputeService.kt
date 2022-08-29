@@ -25,17 +25,21 @@ package org.opendc.compute.service
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.metrics.MeterProvider
 import org.opendc.compute.api.ComputeClient
+import org.opendc.compute.api.Server
 import org.opendc.compute.service.driver.Host
 import org.opendc.compute.service.internal.ComputeServiceImpl
+import org.opendc.compute.service.internal.HostView
 import org.opendc.compute.service.scheduler.ComputeScheduler
 import java.time.Clock
 import java.time.Duration
+import java.util.UUID
 import kotlin.coroutines.CoroutineContext
 
 /**
  * The [ComputeService] hosts the API implementation of the OpenDC Compute service.
  */
 public interface ComputeService : AutoCloseable {
+    public val views: MutableMap<UUID, HostView>
     /**
      * The hosts that are used by the compute service.
      */

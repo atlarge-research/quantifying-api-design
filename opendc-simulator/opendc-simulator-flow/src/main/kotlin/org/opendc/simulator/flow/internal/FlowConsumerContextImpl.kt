@@ -31,7 +31,6 @@ import kotlin.math.min
  * The logging instance of this connection.
  */
 private val logger = KotlinLogging.logger {}
-
 /**
  * Implementation of a [FlowConnection] managing the communication between flow sources and consumers.
  */
@@ -139,6 +138,8 @@ internal class FlowConsumerContextImpl(
             scheduleImmediate(now, newFlags)
         }
     }
+
+
 
     override fun close() {
         val flags = _flags

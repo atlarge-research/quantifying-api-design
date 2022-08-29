@@ -40,5 +40,6 @@ dependencies {
     runtimeOnly(projects.opendcTrace.opendcTraceOpendc)
     runtimeOnly(projects.opendcTrace.opendcTraceBitbrains)
     runtimeOnly(projects.opendcTrace.opendcTraceAzure)
+    runtimeOnly(projects.opendcTrace.opendcTraceWtf)
     runtimeOnly(libs.log4j.slf4j)
 }

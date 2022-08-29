@@ -44,15 +44,15 @@ import kotlin.coroutines.CoroutineContext
 /**
  * A virtual machine instance that is managed by a [SimHost].
  */
-internal class Guest(
+public class Guest(
     context: CoroutineContext,
     private val clock: Clock,
-    val host: SimHost,
+    public val host: SimHost,
     private val hypervisor: SimHypervisor,
     private val mapper: SimWorkloadMapper,
     private val listener: GuestListener,
-    val server: Server,
-    val machine: SimVirtualMachine
+    public val server: Server,
+    public val machine: SimVirtualMachine
 ) {
     /**
      * The [CoroutineScope] of the guest.
@@ -70,17 +70,17 @@ internal class Guest(
      * [ServerState.PROVISIONING] is an invalid value for a guest, since it applies before the host is selected for
      * a server.
      */
-    var state: ServerState = ServerState.TERMINATED
+    public var state: ServerState = ServerState.TERMINATED
 
     /**
      * The attributes of the guest.
      */
-    val attributes: Attributes = GuestAttributes(this)
+    public val attributes: Attributes = GuestAttributes(this)
 
     /**
      * Start the guest.
      */
-    suspend fun start() {
+    public suspend fun start() {
         when (state) {
             ServerState.TERMINATED, ServerState.ERROR -> {
                 logger.info { "User requested to start server ${server.uid}" }
@@ -98,7 +98,7 @@ internal class Guest(
     /**
      * Stop the guest.
      */
-    suspend fun stop() {
+    public suspend fun stop() {
         when (state) {
             ServerState.RUNNING -> doStop(ServerState.TERMINATED)
             ServerState.ERROR -> doRecover()
@@ -113,7 +113,7 @@ internal class Guest(
      * This operation will stop the guest if it is running on the host and remove all resources associated with the
      * guest.
      */
-    suspend fun delete() {
+    public suspend fun delete() {
         stop()
 
         state = ServerState.DELETED
@@ -126,7 +126,7 @@ internal class Guest(
      *
      * This operation forcibly stops the guest and puts the server into an error state.
      */
-    suspend fun fail() {
+    public suspend fun fail() {
         if (state != ServerState.RUNNING) {
             return
         }
@@ -137,7 +137,7 @@ internal class Guest(
     /**
      * Recover the guest if it is in an error state.
      */
-    suspend fun recover() {
+    public suspend fun recover() {
         if (state != ServerState.ERROR) {
             return
         }
@@ -227,7 +227,7 @@ internal class Guest(
     /**
      * Helper function to track the uptime and downtime of the guest.
      */
-    fun updateUptime(duration: Long) {
+    public fun updateUptime(duration: Long) {
         if (state == ServerState.RUNNING) {
             _uptime += duration
         } else if (state == ServerState.ERROR) {
@@ -238,7 +238,7 @@ internal class Guest(
     /**
      * Helper function to track the uptime of the guest.
      */
-    fun collectUptime(result: ObservableLongMeasurement) {
+    public fun collectUptime(result: ObservableLongMeasurement) {
         result.record(_uptime, _upState)
         result.record(_downtime, _downState)
     }
@@ -248,7 +248,7 @@ internal class Guest(
     /**
      * Helper function to track the boot time of the guest.
      */
-    fun collectBootTime(result: ObservableLongMeasurement) {
+    public fun collectBootTime(result: ObservableLongMeasurement) {
         if (_bootTime != Long.MIN_VALUE) {
             result.record(_bootTime, attributes)
         }
@@ -270,7 +270,7 @@ internal class Guest(
     /**
      * Helper function to track the CPU time of a machine.
      */
-    fun collectCpuTime(result: ObservableLongMeasurement) {
+    public fun collectCpuTime(result: ObservableLongMeasurement) {
         val counters = machine.counters
         counters.flush()
 
@@ -285,7 +285,7 @@ internal class Guest(
     /**
      * Helper function to collect the CPU limits of a machine.
      */
-    fun collectCpuLimit(result: ObservableDoubleMeasurement) {
+    public fun collectCpuLimit(result: ObservableDoubleMeasurement) {
         result.record(_cpuLimit, attributes)
     }
 

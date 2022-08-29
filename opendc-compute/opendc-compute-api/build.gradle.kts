@@ -26,3 +26,4 @@ description = "API interface for the OpenDC Compute service"
 plugins {
     `kotlin-library-conventions`
 }
+
