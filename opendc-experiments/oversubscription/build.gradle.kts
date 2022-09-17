@@ -33,6 +33,7 @@ dependencies {
 
     implementation(projects.opendcTrace.opendcTraceAzure)
     implementation(projects.opendcTrace.opendcTraceWtf)
+    implementation(projects.opendcCommon)
 
     implementation(projects.opendcExperiments.opendcExperimentsCapelin)
     implementation(projects.opendcWeb.opendcWebRunner)

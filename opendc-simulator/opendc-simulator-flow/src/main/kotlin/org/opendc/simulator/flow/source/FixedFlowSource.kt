@@ -27,9 +27,6 @@ import org.opendc.simulator.flow.FlowSource
 import kotlin.math.roundToLong
 
 
-public var k : Int = 0
-public var l : Int = 0
-public var h : Int = 0
 
 /**
  * A [FlowSource] that contains a fixed [amount] and is pushed with a given [utilization].
@@ -37,14 +34,12 @@ public var h : Int = 0
 public class FixedFlowSource(private val amount: Double, private val utilization: Double, private val name :String = "") : FlowSource {
 
     init {
-        k++
-        println("k " + k)
         require(amount >= 0.0) { "Amount must be positive" }
         require(utilization > 0.0) { "Utilization must be positive" }
 
     }
 
-    private var remainingAmount = amount
+    public var remainingAmount: Double = amount
     private var lastPull: Long = 0L
 
     override fun onStart(conn: FlowConnection, now: Long) {
@@ -64,13 +59,9 @@ public class FixedFlowSource(private val amount: Double, private val utilization
         val duration = (remainingAmount / limit * 1000).roundToLong()
 
         return if (duration > 0) {
-            h++
-            println("h " + h + " " + duration.toString())
             conn.push(limit)
             duration
         } else {
-            l++
-            println("l " + l)
             conn.close()
             Long.MAX_VALUE
         }

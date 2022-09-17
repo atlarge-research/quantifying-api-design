@@ -49,4 +49,5 @@ public data class VirtualMachine(
     val stopTime: Instant,
     val trace: SimTrace,
     val cpuUtilization: Double = -1.0,
+    var cluster: String = ""
 )

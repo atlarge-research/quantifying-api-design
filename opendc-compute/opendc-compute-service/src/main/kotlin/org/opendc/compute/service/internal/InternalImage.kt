@@ -23,13 +23,14 @@
 package org.opendc.compute.service.internal
 
 import org.opendc.compute.api.Image
+import org.opendc.compute.service.ComputeService
 import java.util.*
 
 /**
  * Internal stateful representation of an [Image].
  */
-internal class InternalImage(
-    private val service: ComputeServiceImpl,
+public class InternalImage(
+    private val service: ComputeService,
     override val uid: UUID,
     override val name: String,
     labels: Map<String, String>,

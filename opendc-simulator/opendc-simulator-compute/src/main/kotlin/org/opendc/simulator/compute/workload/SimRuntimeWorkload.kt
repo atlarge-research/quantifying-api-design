@@ -25,8 +25,6 @@ package org.opendc.simulator.compute.workload
 import org.opendc.simulator.compute.SimMachineContext
 import org.opendc.simulator.flow.source.FixedFlowSource
 
-public var i : Int = 0
-public var j : Int = 0
 /**
  * A [SimWorkload] that models application execution as a single duration.
  *
@@ -36,27 +34,61 @@ public var j : Int = 0
 public class SimRuntimeWorkload(
     public val duration: Long,
     public val utilization: Double = 0.8,
-    public val name: String = ""
+    public val name: String = "",
+    public val sources: MutableList<FixedFlowSource> = mutableListOf(),
+    public val amount: Double = 0.0
 ) : SimWorkload {
+
+
     init {
         require(duration >= 0) { "Duration must be non-negative" }
         require(utilization > 0.0 && utilization <= 1.0) { "Utilization must be in (0, 1]" }
     }
 
     override fun onStart(ctx: SimMachineContext) {
-        i++
-        println("i " + i)
         val lifecycle = SimWorkloadLifecycle(ctx)
-        for (cpu in ctx.cpus) {
-            val limit = cpu.capacity * utilization
-            cpu.startConsumer(lifecycle.waitFor(FixedFlowSource((limit / 1000) * duration, utilization, name)))
+
+        if (sources.size != 0) {
+            var i = 0
+            for (source in sources) {
+                ctx.cpus[i].startConsumer(lifecycle.waitFor(source))
+                i++
+            }
+        } else if (amount > 0.0) {
+            var i = 0
+            for (cpu in ctx.cpus) {
+                val source = FixedFlowSource(amount, utilization, name + "-$i")
+                sources.add(source)
+                cpu.startConsumer(lifecycle.waitFor(source))
+                i++
+            }
+        } else {
+            var i = 0
+            for (cpu in ctx.cpus) {
+                val limit = cpu.capacity * utilization
+                val source = FixedFlowSource((limit / 1000) * duration, utilization, name + "-$i")
+                sources.add(source)
+                cpu.startConsumer(lifecycle.waitFor(source))
+                i++
+            }
         }
+
     }
 
-    override fun onStop(ctx: SimMachineContext) {
-        j++
-        println("j " + j)
-    }
+    override fun onStop(ctx: SimMachineContext) {}
 
     override fun toString(): String = "SimRuntimeWorkload(duration=$duration,utilization=$utilization)"
+
+    @JvmName("getSources1")
+    public fun getSources(): MutableList<FixedFlowSource> {
+        return sources
+    }
+
+    public fun getRemainingAmountMean(): Double {
+        var remainingAmount: Double = 0.0
+        for (source in sources) {
+            remainingAmount += source.remainingAmount
+        }
+        return remainingAmount / sources.size
+    }
 }

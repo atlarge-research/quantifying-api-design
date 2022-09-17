@@ -444,7 +444,9 @@ public class MaxMinFlowMultiplexer(
                     val grantedRate = min(input.allowedRate, availableShare)
 
                     availableCapacity -= grantedRate
-                    input.actualRate = grantedRate
+                    if (input.actualRate != grantedRate){
+                        input.actualRate = grantedRate
+                    }
                 }
 
                 capacity - availableCapacity

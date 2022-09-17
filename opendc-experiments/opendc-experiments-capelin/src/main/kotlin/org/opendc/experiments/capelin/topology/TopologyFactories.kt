@@ -48,17 +48,9 @@ private val reader = ClusterSpecReader()
 fun clusterTopology(
     file: File,
     powerModel: PowerModel = LinearPowerModel(350.0, idlePower = 200.0),
-    random: Random = Random(0)
-): Topology = clusterTopology(reader.read(file), powerModel, random)
-
-/**
- * Construct a [Topology] from the specified [input].
- */
-fun clusterTopology(
-    input: InputStream,
-    powerModel: PowerModel = LinearPowerModel(350.0, idlePower = 200.0),
-    random: Random = Random(0)
-): Topology = clusterTopology(reader.read(input), powerModel, random)
+    random: Random = Random(0),
+    sample: Float = 1.0F
+): Topology = clusterTopology(reader.read(file), powerModel, random, sample)
 
 /**
  * Construct a [Topology] from the given list of [clusters].
@@ -66,7 +58,8 @@ fun clusterTopology(
 fun clusterTopology(
     clusters: List<ClusterSpec>,
     powerModel: PowerModel,
-    random: Random = Random(0)
+    random: Random = Random(0),
+    sample: Float = 1.0F
 ): Topology {
     return object : Topology {
         override fun resolve(): List<HostSpec> {
@@ -82,14 +75,15 @@ fun clusterTopology(
                     listOf(unknownMemoryUnit)
                 )
 
-                repeat(cluster.hostCount) {
+                repeat((cluster.hostCount*sample).toInt()) {
                     val spec = HostSpec(
                         UUID(random.nextLong(), it.toLong()),
                         "node-${cluster.name}-$it",
                         mapOf("cluster" to cluster.id),
                         machineModel,
-                        SimplePowerDriver(powerModel)
-                    )
+                        SimplePowerDriver(powerModel),
+                        cluster = cluster.name,
+                        )
 
                     hosts += spec
                 }

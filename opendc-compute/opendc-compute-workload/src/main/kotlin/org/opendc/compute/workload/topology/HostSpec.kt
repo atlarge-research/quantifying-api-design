@@ -44,5 +44,6 @@ public data class HostSpec(
     val meta: Map<String, Any>,
     val model: MachineModel,
     val powerDriver: PowerDriver,
-    val hypervisor: SimHypervisorProvider = SimFairShareHypervisorProvider()
+    val hypervisor: SimHypervisorProvider = SimFairShareHypervisorProvider(),
+    val cluster: String = "",
 )

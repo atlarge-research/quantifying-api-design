@@ -23,13 +23,14 @@
 package org.opendc.compute.service.internal
 
 import org.opendc.compute.api.Flavor
+import org.opendc.compute.service.ComputeService
 import java.util.*
 
 /**
  * Internal stateful representation of a [Flavor].
  */
-internal class InternalFlavor(
-    private val service: ComputeServiceImpl,
+public class InternalFlavor(
+    private val service: ComputeService,
     override val uid: UUID,
     name: String,
     cpuCount: Int,

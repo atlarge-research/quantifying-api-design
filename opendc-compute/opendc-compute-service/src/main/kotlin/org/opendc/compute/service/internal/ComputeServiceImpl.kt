@@ -36,6 +36,7 @@ import org.opendc.compute.service.driver.Host
 import org.opendc.compute.service.driver.HostListener
 import org.opendc.compute.service.driver.HostState
 import org.opendc.compute.service.scheduler.ComputeScheduler
+import org.opendc.simulator.compute.workload.SimRuntimeWorkload
 import java.time.Clock
 import java.time.Duration
 import java.util.*
@@ -51,15 +52,17 @@ import kotlin.math.max
  * @param scheduler The scheduler implementation to use.
  * @param schedulingQuantum The interval between scheduling cycles.
  */
-internal class ComputeServiceImpl(
+public class ComputeServiceImpl(
     private val context: CoroutineContext,
     private val clock: Clock,
     meterProvider: MeterProvider,
     private val scheduler: ComputeScheduler,
     schedulingQuantum: Duration
 ) : ComputeService, HostListener {
-
-    public override val views: MutableMap<UUID, HostView> = mutableMapOf<UUID, HostView>()
+    /**
+     * A mapping from host to servers.
+     */
+    private val hostToServers = mutableMapOf<HostView, MutableList<InternalServer>>()
     /**
      * The [CoroutineScope] of the service bounded by the lifecycle of the service.
      */
@@ -340,15 +343,15 @@ internal class ComputeServiceImpl(
         return request
     }
 
-    internal fun delete(flavor: InternalFlavor) {
+    override fun delete(flavor: Flavor) {
         flavors.remove(flavor.uid)
     }
 
-    internal fun delete(image: InternalImage) {
+    override fun delete(image: Image) {
         images.remove(image.uid)
     }
 
-    internal fun delete(server: InternalServer) {
+    override fun delete(server: Server) {
         servers.remove(server.uid)
     }
 
@@ -397,51 +400,54 @@ internal class ComputeServiceImpl(
                 }
             }
 
-            val host = hv.host
-
             // Remove request from pendings
             _servers.add(-1, _serversPendingAttr)
             _schedulingLatency.record(now - request.submitTime, server.attributes)
 
-            logger.info { "Assigned server $server to host $host." }
 
-            // Speculatively update the hypervisor view information to prevent other images in the queue from
-            // deciding on stale values.
-            hv.instanceCount++
-            hv.provisionedCores += server.flavor.cpuCount
-            hv.availableMemory -= server.flavor.memorySize // XXX Temporary hack
 
-            scope.launch {
-                try {
-                    server.host = host
-                    views[server.uid] = hv
-                    host.spawn(server)
-                    activeServers[server] = host
-
-                    _servers.add(1, _serversActiveAttr)
-                    _schedulingAttempts.add(1, _schedulingAttemptsSuccessAttr)
-                } catch (e: Throwable) {
-                    logger.error(e) { "Failed to deploy VM" }
-
-                    hv.instanceCount--
-                    hv.provisionedCores -= server.flavor.cpuCount
-                    hv.availableMemory += server.flavor.memorySize
-
-                    _schedulingAttempts.add(1, _schedulingAttemptsErrorAttr)
-                }
+            val oversubscription = calculateOversubscription(hv, server)
+            if (oversubscription>0){
+                tryToMigrate(hv, oversubscription)
             }
+
+            logger.info { "Assigned server $server to host ${hv.host}." }
+
+            assignServer(hv, server)
         }
         queue = newQueue
     }
 
-    /**
-     * A request to schedule an [InternalServer] onto one of the [Host]s.
-     */
-    internal data class SchedulingRequest(val server: InternalServer, val submitTime: Long) {
-        /**
-         * A flag to indicate that the request is cancelled.
-         */
-        var isCancelled: Boolean = false
+    private fun assignServer(hv : HostView, server: InternalServer){
+        val host = hv.host
+        // Speculatively update the hypervisor view information to prevent other images in the queue from
+        // deciding on stale values.
+        hv.instanceCount++
+        hv.provisionedCores += server.flavor.cpuCount
+        hv.availableMemory -= server.flavor.memorySize // XXX Temporary hack
+        addHostMapping(server, hv)
+        addK8sPartition(server, host)
+
+        scope.launch {
+            try {
+                server.host = host
+                host.spawn(server)
+                activeServers[server] = host
+
+                _servers.add(1, _serversActiveAttr)
+                _schedulingAttempts.add(1, _schedulingAttemptsSuccessAttr)
+            } catch (e: Throwable) {
+                logger.error(e) { "Failed to deploy VM" }
+
+                hv.instanceCount--
+                hv.provisionedCores -= server.flavor.cpuCount
+                hv.availableMemory += server.flavor.memorySize
+                deleteHostMapping(server, hv)
+                freeK8sPartition(server, host)
+
+                _schedulingAttempts.add(1, _schedulingAttemptsErrorAttr)
+            }
+        }
     }
 
     override fun onStateChanged(host: Host, newState: HostState) {
@@ -469,6 +475,92 @@ internal class ComputeServiceImpl(
         }
     }
 
+    fun calculateOversubscription(hv: HostView, newServer: InternalServer? = null) : Int{
+        val total = hv.host.model.cpuCount
+        var used = if (newServer != null) getRealCpuCount(newServer) else 0
+        for (server in hostToServers.getOrDefault(hv, mutableListOf())){
+            used += getRealCpuCount(server)
+        }
+        return  used - total
+    }
+
+    fun getRealCpuCount(server: InternalServer) : Int{
+        return (server.flavor.cpuCount * getUtilization(server)).toInt()
+    }
+
+    fun getUtilization(server: InternalServer) : Double{
+        val workload : SimRuntimeWorkload = server.flavor.meta["workload"] as SimRuntimeWorkload
+        return workload.utilization
+    }
+
+    fun tryToMigrate(hv: HostView, cpuCount: Int){
+        var remaining = cpuCount
+        val migrations = mutableListOf<Pair<InternalServer, Host>>()
+        for (server in hostToServers.getOrDefault(hv, mutableListOf()).sortedBy { cpuCount-getRealCpuCount(it) }){
+            val cluster = server.flavor.meta.getOrDefault("cluster", "") as String
+            val candidateHosts = hosts.
+                filter { it.partitions.contains(cluster) &&
+                    (it.partitions[cluster]!! - it.partitionsUsed[cluster]!!) < server.flavor.cpuCount &&
+                    calculateOversubscription(it, server)<=0
+                }.
+                sortedBy { -(it.partitions[cluster]!! - it.partitionsUsed[cluster]!!) }
+            if (candidateHosts.size>0){
+                migrations.add(Pair(server, candidateHosts[0]))
+                remaining -= getRealCpuCount(server)
+                if (remaining < 0){
+                    break
+                }
+            }
+        }
+
+        for (migration in migrations){
+            migration.first.host = migration.second
+            val workload = migration.first.flavor.meta["workload"] as SimRuntimeWorkload
+            migration.first.flavor.meta["workload"] = SimRuntimeWorkload(0, utilization = workload.utilization, sources = workload.getSources())
+
+                migration.first.stop()
+            }
+            assignServer(hostToView[migration.second]!!, migration.first)
+        }
+
+
+    // migrate the cpuCount server pairs
+
+    }
+
+    fun addHostMapping(server: InternalServer, hv: HostView){
+        val servers = hostToServers.getOrDefault(hv, mutableListOf())
+        servers.add(server)
+        hostToServers[hv] = servers
+    }
+
+    fun deleteHostMapping(server: InternalServer, hv: HostView){
+        hostToServers[hv]?.remove(server)
+    }
+
+
+    fun addK8sPartition(server: Server, host: Host){
+        val cluster: String = server.flavor.meta["cluster"] as String
+        if (cluster == ""){
+            return
+        }
+        val used = host.partitionsUsed[cluster]
+        if (used != null){
+            host.partitionsUsed[cluster] = used + server.flavor.cpuCount
+        }
+    }
+
+    fun freeK8sPartition(server: Server, host: Host){
+        val cluster: String = server.flavor.meta["cluster"] as String
+        if (cluster == ""){
+            return
+        }
+        val used = host.partitionsUsed[cluster]
+        if (used != null){
+            host.partitionsUsed[cluster] = used - server.flavor.cpuCount
+        }
+    }
+
     override fun onStateChanged(host: Host, server: Server, newState: ServerState) {
         require(server is InternalServer) { "Invalid server type passed to service" }
 
@@ -492,7 +584,8 @@ internal class ComputeServiceImpl(
                 hv.provisionedCores -= server.flavor.cpuCount
                 hv.instanceCount--
                 hv.availableMemory += server.flavor.memorySize
-                views.remove(server.uid)
+                deleteHostMapping(server, hv)
+                freeK8sPartition(server, hv.host)
             } else {
                 logger.error { "Unknown host $host" }
             }
@@ -510,4 +603,14 @@ internal class ComputeServiceImpl(
             result.record(server.lastProvisioningTimestamp, server.attributes)
         }
     }
+}
+
+/**
+ * A request to schedule an [InternalServer] onto one of the [Host]s.
+ */
+public data class SchedulingRequest(val server: InternalServer, val submitTime: Long) {
+    /**
+     * A flag to indicate that the request is cancelled.
+     */
+    var isCancelled: Boolean = false
 }

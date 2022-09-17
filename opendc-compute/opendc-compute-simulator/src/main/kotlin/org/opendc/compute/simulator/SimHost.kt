@@ -34,6 +34,7 @@ import org.opendc.compute.api.Flavor
 import org.opendc.compute.api.Server
 import org.opendc.compute.api.ServerState
 import org.opendc.compute.service.driver.*
+import org.opendc.compute.service.internal.ClientServer
 import org.opendc.compute.simulator.internal.Guest
 import org.opendc.compute.simulator.internal.GuestListener
 import org.opendc.simulator.compute.*
@@ -70,6 +71,12 @@ public class SimHost(
     interferenceDomain: VmInterferenceDomain? = null,
     private val optimize: Boolean = false
 ) : Host, AutoCloseable {
+
+    public override var partitionsTotalRemaining : Int = model.cpus.size
+    public override var partitionsUsed : MutableMap<String, MutableList<Int>> = mutableMapOf()
+    public override var partitions : MutableMap<String, MutableList<Int>> = mutableMapOf()
+
+    public var server: ClientServer? = null
     /**
      * The [CoroutineScope] of the host bounded by the lifecycle of the host.
      */

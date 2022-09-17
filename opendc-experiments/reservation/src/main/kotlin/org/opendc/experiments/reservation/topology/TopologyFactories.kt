@@ -84,6 +84,7 @@ fun clusterTopology(
 
                 repeat(cluster.hostCount) {
                     val spec = HostSpec(
+                        cluster.name,
                         UUID(random.nextLong(), it.toLong()),
                         "node-${cluster.name}-$it",
                         mapOf("cluster" to cluster.id),

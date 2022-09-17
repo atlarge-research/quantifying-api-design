@@ -28,7 +28,7 @@ import java.util.UUID
 /**
  * A [Flavor] implementation that is passed to clients but delegates its implementation to another class.
  */
-internal class ClientFlavor(private val delegate: Flavor) : Flavor {
+public class ClientFlavor(private val delegate: Flavor) : Flavor {
     override val uid: UUID = delegate.uid
 
     override var name: String = delegate.name

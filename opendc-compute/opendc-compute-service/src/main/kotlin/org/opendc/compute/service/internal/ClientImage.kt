@@ -28,7 +28,7 @@ import java.util.*
 /**
  * An [Image] implementation that is passed to clients but delegates its implementation to another class.
  */
-internal class ClientImage(private val delegate: Image) : Image {
+public class ClientImage(private val delegate: Image) : Image {
     override val uid: UUID = delegate.uid
 
     override var name: String = delegate.name

@@ -1,8 +1,2 @@
 ClusterID;ClusterName;Cores;Speed;Memory;numberOfHosts;memoryCapacityPerHost;coreCountPerHost
-A1;A1;0;3.25;0;388;537;1
-A2;A2;0;3.14;0;172;537;2
-A4;A4;0;3.16;0;265;537;4
-A6;A6;0;3.06;0;2;537;6
-A8;A8;0;3.09;0;111;537;8
-A16;A16;0;3.08;0;8;537;16
-A32;A32;0;3.18;0;11;537;32
+A32;A32;0;3.35;0;99;537;32

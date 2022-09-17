@@ -27,20 +27,22 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes
 import mu.KotlinLogging
 import org.opendc.compute.api.*
+import org.opendc.compute.service.ComputeService
 import org.opendc.compute.service.driver.Host
 import java.util.UUID
 
 /**
  * Internal implementation of the [Server] interface.
  */
-internal class InternalServer(
-    private val service: ComputeServiceImpl,
+public class InternalServer(
+    private val service: ComputeService,
     override val uid: UUID,
     override val name: String,
     override val flavor: InternalFlavor,
     override val image: InternalImage,
     override val labels: MutableMap<String, String>,
-    override val meta: MutableMap<String, Any>
+    override val meta: MutableMap<String, Any>,
+    public val utilization : Double = 1.0,
 ) : Server {
     /**
      * The logger instance of this server.
@@ -56,7 +58,8 @@ internal class InternalServer(
     /**
      * The attributes of a server.
      */
-    @JvmField internal val attributes: Attributes = Attributes.builder()
+    @JvmField
+    public val attributes: Attributes = Attributes.builder()
         .put(ResourceAttributes.HOST_NAME, name)
         .put(ResourceAttributes.HOST_ID, uid.toString())
         .put(ResourceAttributes.HOST_TYPE, flavor.name)
@@ -71,12 +74,14 @@ internal class InternalServer(
     /**
      * The [Host] that has been assigned to host the server.
      */
-    @JvmField internal var host: Host? = null
+    @JvmField
+    public var host: Host? = null
 
     /**
      * The most recent timestamp when the server entered a provisioning state.
      */
-    @JvmField internal var lastProvisioningTimestamp: Long = Long.MIN_VALUE
+    @JvmField
+    public var lastProvisioningTimestamp: Long = Long.MIN_VALUE
 
     /**
      * The current scheduling request.

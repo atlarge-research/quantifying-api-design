@@ -100,4 +100,9 @@ public interface Host {
      * Remove a [HostListener] from this host.
      */
     public fun removeListener(listener: HostListener)
+
+    // K8s extension variables
+    public var partitionsTotalRemaining : Int
+    public var partitionsUsed : MutableMap<String, MutableList<Int>>
+    public var partitions : MutableMap<String, MutableList<Int>>
 }

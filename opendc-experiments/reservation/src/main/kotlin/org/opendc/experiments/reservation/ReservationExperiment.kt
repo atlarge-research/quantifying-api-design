@@ -23,7 +23,7 @@ import org.opendc.experiments.reservation.trace.trace
 public class ReservationExperiment : Experiment(name = "reservation") {
     private val logger = KotlinLogging.logger {}
     val workloadTrace by anyOf(
-        trace("bitbrains-small"),
+        trace("bitbrains"),
         //trace("materna").sampleByLoad(1.0),
         //trace("solvinity").sampleByLoad(1.0),
     )

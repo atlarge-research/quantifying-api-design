@@ -35,6 +35,7 @@ dependencies {
     implementation(projects.opendcCommon)
     implementation(libs.kotlin.logging)
     implementation(libs.opentelemetry.semconv)
+    implementation(projects.opendcSimulator.opendcSimulatorCompute)
 
     testImplementation(projects.opendcSimulator.opendcSimulatorCore)
     testRuntimeOnly(libs.log4j.slf4j)
