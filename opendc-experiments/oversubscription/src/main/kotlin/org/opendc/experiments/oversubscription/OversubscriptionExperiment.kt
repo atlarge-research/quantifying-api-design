@@ -1,7 +1,6 @@
 package org.opendc.experiments.oversubscription
 
 import mu.KotlinLogging
-import org.opendc.compute.workload.*
 import org.opendc.compute.workload.export.parquet.ParquetComputeMetricExporter
 import org.opendc.compute.workload.telemetry.SdkTelemetryManager
 import org.opendc.harness.dsl.Experiment
@@ -11,8 +10,9 @@ import org.opendc.telemetry.compute.collectServiceMetrics
 import java.io.File
 import java.util.*
 import org.opendc.experiments.capelin.topology.clusterTopology
-import org.opendc.experiments.oversubscription.k8s.K8sComputeService
-import org.opendc.experiments.oversubscription.k8s.createComputeSchedulerK8s
+import org.opendc.experiments.oversubscription.k8s.K8sComputeServiceHelper
+import org.opendc.experiments.oversubscription.k8s.createK8sNodeScheduler
+import org.opendc.experiments.oversubscription.k8s.createK8sPodScheduler
 import org.opendc.experiments.oversubscription.trace.ComputeWorkloadLoader
 import org.opendc.experiments.oversubscription.trace.TraceComputeWorkload
 import org.opendc.experiments.oversubscription.trace.trace
@@ -21,16 +21,18 @@ import org.opendc.telemetry.sdk.metrics.export.CoroutineMetricReader
 public class OversubscriptionExperiment : Experiment(name = "oversubscription") {
     private val logger = KotlinLogging.logger {}
     val workloadTrace: TraceComputeWorkload by anyOf(
-        trace("google")
+        trace("bitbrains")
     )
-    val tenantAmount: Int by anyOf(2)
 
     val oversubscriptionRatio : Float by anyOf(1.5F)
 
     private val vmPlacements by anyOf(emptyMap<String, String>())
-    private val allocationPolicy: String by anyOf(
+    private val nodeAllocationPolicy: String by anyOf(
+        "provisioned-cores",
+    )
+
+    private val podAllocationPolicy: String by anyOf(
         "regular",
-        "oversubscription"
     )
 
     private val topologySample : Float = 1.0F
@@ -42,7 +44,7 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
         val workload = workloadTrace.resolve(workloadLoader, seeder)
         val exporter = ParquetComputeMetricExporter(
             File("output/${workloadTrace.name}"),
-            "policy=$allocationPolicy-ratio=$oversubscriptionRatio",
+            "policy=$nodeAllocationPolicy-ratio=$oversubscriptionRatio",
             4096
         )
         val topology = clusterTopology(File("src/main/resources/topology", "${workloadTrace.name}-base.txt"), sample = topologySample)
@@ -50,15 +52,17 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
 
         val telemetry = SdkTelemetryManager(clock)
 
-        val computeScheduler = createComputeSchedulerK8s(allocationPolicy, seeder, vmPlacements, cpuAllocationRatio = oversubscriptionRatio.toDouble(), ramAllocationRatio = oversubscriptionRatio.toDouble(), tenantAmount = tenantAmount)
+        val k8sNodeScheduler = createK8sNodeScheduler(nodeAllocationPolicy, seeder, vmPlacements, cpuAllocationRatio = oversubscriptionRatio.toDouble(), ramAllocationRatio = oversubscriptionRatio.toDouble())
+        val k8sPodScheduler = createK8sPodScheduler(podAllocationPolicy, seeder, vmPlacements, cpuAllocationRatio = oversubscriptionRatio.toDouble(), ramAllocationRatio = oversubscriptionRatio.toDouble())
 
         telemetry.registerMetricReader(CoroutineMetricReader(this, exporter))
 
-        val runner = K8sComputeService(
+        val runner = K8sComputeServiceHelper(
             coroutineContext,
             clock,
             telemetry,
-            computeScheduler,
+            nodeScheduler = k8sNodeScheduler,
+            podScheduler = k8sPodScheduler,
             k8sTopology = k8sTopology,
             oversubscription = oversubscriptionRatio
         )

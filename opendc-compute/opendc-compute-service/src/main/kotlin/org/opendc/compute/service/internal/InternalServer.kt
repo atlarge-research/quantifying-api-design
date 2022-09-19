@@ -86,7 +86,7 @@ public class InternalServer(
     /**
      * The current scheduling request.
      */
-    private var request: ComputeServiceImpl.SchedulingRequest? = null
+    private var request: SchedulingRequest? = null
 
     override suspend fun start() {
         when (state) {

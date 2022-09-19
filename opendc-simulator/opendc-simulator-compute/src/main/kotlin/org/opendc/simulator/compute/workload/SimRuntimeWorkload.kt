@@ -85,10 +85,15 @@ public class SimRuntimeWorkload(
     }
 
     public fun getRemainingAmountMean(): Double {
+        if (sources.size == 0){
+            return -1.0
+        }
+
         var remainingAmount: Double = 0.0
         for (source in sources) {
             remainingAmount += source.remainingAmount
         }
+
         return remainingAmount / sources.size
     }
 }

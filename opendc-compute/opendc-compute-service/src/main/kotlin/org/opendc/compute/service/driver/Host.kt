@@ -22,7 +22,10 @@
 
 package org.opendc.compute.service.driver
 
+import org.opendc.compute.api.Image
 import org.opendc.compute.api.Server
+import org.opendc.compute.service.internal.InternalServer
+import java.rmi.server.UID
 import java.util.*
 
 /**
@@ -102,7 +105,18 @@ public interface Host {
     public fun removeListener(listener: HostListener)
 
     // K8s extension variables
-    public var partitionsTotalRemaining : Int
-    public var partitionsUsed : MutableMap<String, MutableList<Int>>
-    public var partitions : MutableMap<String, MutableList<Int>>
+    public var k8sNodes : MutableMap<String, MutableList<K8sNode>>
+    public fun addK8sNode(node :K8sNode)
+    public fun removeK8sNode(node :K8sNode)
 }
+
+public data class K8sNode(
+    val cluster: String,
+    val uid: UUID,
+    val name: String,
+    val image: Image,
+    var cpuCount: Int,
+    var availableCpuCount: Int,
+    var availableMemory: Long,
+    var pods : MutableList<InternalServer>,
+)

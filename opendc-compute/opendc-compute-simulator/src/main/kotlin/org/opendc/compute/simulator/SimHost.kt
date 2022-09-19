@@ -72,9 +72,7 @@ public class SimHost(
     private val optimize: Boolean = false
 ) : Host, AutoCloseable {
 
-    public override var partitionsTotalRemaining : Int = model.cpus.size
-    public override var partitionsUsed : MutableMap<String, MutableList<Int>> = mutableMapOf()
-    public override var partitions : MutableMap<String, MutableList<Int>> = mutableMapOf()
+    public override var k8sNodes : MutableMap<String, MutableList<K8sNode>> = mutableMapOf()
 
     public var server: ClientServer? = null
     /**
@@ -497,5 +495,17 @@ public class SimHost(
         for (i in guests.indices) {
             guests[i].collectBootTime(result)
         }
+    }
+
+    public override fun addK8sNode(node :K8sNode){
+        if (!k8sNodes.contains(node.cluster)) {
+            k8sNodes[node.cluster] = mutableListOf(node)
+        } else{
+            k8sNodes[node.cluster]!!.add(node)
+        }
+    }
+
+    public override fun removeK8sNode(node :K8sNode){
+        k8sNodes[node.cluster]!!.remove(node)
     }
 }

@@ -39,13 +39,13 @@ import org.opendc.compute.service.ComputeService
 import org.opendc.compute.service.driver.Host
 import org.opendc.compute.service.driver.HostListener
 import org.opendc.compute.service.driver.HostState
+import org.opendc.compute.service.driver.K8sNode
 import org.opendc.compute.service.scheduler.ComputeScheduler
 import org.opendc.simulator.compute.workload.SimRuntimeWorkload
 import java.time.Clock
 import java.time.Duration
 import java.util.*
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.abs
 import kotlin.math.max
 
 /**
@@ -54,21 +54,18 @@ import kotlin.math.max
  * @param context The [CoroutineContext] to use in the service.
  * @param clock The clock instance to use.
  * @param meterProvider The [MeterProvider] for creating a [Meter] for the service.
- * @param scheduler The scheduler implementation to use.
+ * @param podScheduler The scheduler implementation to use.
  * @param schedulingQuantum The interval between scheduling cycles.
  */
-internal class K8sComputeService(
+class K8sComputeService(
     private val context: CoroutineContext,
     private val clock: Clock,
     meterProvider: MeterProvider,
-    private val scheduler: ComputeScheduler,
-    schedulingQuantum: Duration
+    private val nodeScheduler: ComputeScheduler,
+    private val podScheduler: ComputeScheduler,
+    schedulingQuantum: Duration,
+    private val oversubscriptionApi: Boolean = false
 ) : ComputeService, HostListener {
-    /**
-     * A mapping from host to servers.
-     */
-    private val hostToServers = mutableMapOf<HostView, MutableList<InternalServer>>()
-
     /**
      * The [CoroutineScope] of the service bounded by the lifecycle of the service.
      */
@@ -320,7 +317,8 @@ internal class K8sComputeService(
             availableHosts += hv
         }
 
-        scheduler.addHost(hv)
+        podScheduler.addHost(hv)
+        nodeScheduler.addHost(hv)
         host.addListener(this)
     }
 
@@ -328,7 +326,8 @@ internal class K8sComputeService(
         val view = hostToView.remove(host)
         if (view != null) {
             availableHosts.remove(view)
-            scheduler.removeHost(view)
+            podScheduler.removeHost(view)
+            nodeScheduler.removeHost(view)
             host.removeListener(this)
         }
     }
@@ -337,7 +336,7 @@ internal class K8sComputeService(
         scope.cancel()
     }
 
-    override fun schedule(server: InternalServer): org.opendc.compute.service.internal.SchedulingRequest {
+    override fun schedule(server: InternalServer): SchedulingRequest {
         logger.debug { "Enqueueing server ${server.uid} to be assigned to host." }
         val now = clock.millis()
         val request = SchedulingRequest(server, now)
@@ -349,15 +348,15 @@ internal class K8sComputeService(
         return request
     }
 
-    internal fun delete(flavor: InternalFlavor) {
+    override fun delete(flavor: Flavor) {
         flavors.remove(flavor.uid)
     }
 
-    internal fun delete(image: InternalImage) {
+    override fun delete(image: Image) {
         images.remove(image.uid)
     }
 
-    internal fun delete(server: InternalServer) {
+    override fun delete(server: Server) {
         servers.remove(server.uid)
     }
 
@@ -387,7 +386,7 @@ internal class K8sComputeService(
             }
 
             val server = request.server
-            val hv = scheduler.select(request.server)
+            val hv = podScheduler.select(request.server)
             if (hv == null || !hv.host.canFit(server)) {
                 logger.trace { "Server $server selected for scheduling but no capacity available for it at the moment" }
 
@@ -413,31 +412,30 @@ internal class K8sComputeService(
 
             val oversubscription = calculateOversubscription(hv, server)
             if (oversubscription > 0) {
-                tryToMigrate(hv, oversubscription)
+                tryToMigrate(hv, oversubscription, server.meta["cluster"]!! as String)
             }
 
             logger.info { "Assigned server $server to host ${hv.host}." }
 
-            assignServer(hv, server)
+            assignPod(hv, server)
         }
         queue = newQueue
     }
 
-    private fun assignServer(hv: HostView, server: InternalServer) {
+    private fun assignPod(hv: HostView, pod: InternalServer, node: K8sNode? = null) {
         val host = hv.host
         // Speculatively update the hypervisor view information to prevent other images in the queue from
         // deciding on stale values.
         hv.instanceCount++
-        hv.provisionedCores += server.flavor.cpuCount
-        hv.availableMemory -= server.flavor.memorySize // XXX Temporary hack
-        addHostMapping(server, hv)
-        addK8sPartition(server, host)
+        hv.provisionedCores += pod.flavor.cpuCount
+        hv.availableMemory -= pod.flavor.memorySize // XXX Temporary hack
+        addK8sPod(pod, hv, node)
 
         scope.launch {
             try {
-                server.host = host
-                host.spawn(server)
-                activeServers[server] = host
+                pod.host = host
+                host.spawn(pod)
+                activeServers[pod] = host
 
                 _servers.add(1, _serversActiveAttr)
                 _schedulingAttempts.add(1, _schedulingAttemptsSuccessAttr)
@@ -445,10 +443,9 @@ internal class K8sComputeService(
                 logger.error(e) { "Failed to deploy VM" }
 
                 hv.instanceCount--
-                hv.provisionedCores -= server.flavor.cpuCount
-                hv.availableMemory += server.flavor.memorySize
-                deleteHostMapping(server, hv)
-                freeK8sPartition(server, host)
+                hv.provisionedCores -= pod.flavor.cpuCount
+                hv.availableMemory += pod.flavor.memorySize
+                removeK8sPod(pod, hv, node)
 
                 _schedulingAttempts.add(1, _schedulingAttemptsErrorAttr)
             }
@@ -483,82 +480,208 @@ internal class K8sComputeService(
 
     fun calculateOversubscription(hv: HostView, newServer: InternalServer? = null): Int {
         val total = hv.host.model.cpuCount
-        var used = if (newServer != null) getRealCpuCount(newServer) else 0
-        for (server in hostToServers.getOrDefault(hv, mutableListOf())) {
-            used += getRealCpuCount(server)
+        var used = if (newServer != null) getPodActiveCpuCount(newServer) else 0
+
+        for (cluster in hv.host.k8sNodes.values){
+            for (node in cluster){
+                for (pod in node.pods){
+                    used += getPodActiveCpuCount(pod)
+                }
+            }
         }
+
         return used - total
     }
 
-    fun getRealCpuCount(server: InternalServer): Int {
+    fun getPodActiveCpuCount(server: InternalServer): Int {
         return (server.flavor.cpuCount * getUtilization(server)).toInt()
     }
 
     fun getUtilization(server: InternalServer): Double {
-        val workload: SimRuntimeWorkload = server.flavor.meta["workload"] as SimRuntimeWorkload
+        val workload: SimRuntimeWorkload = server.meta["workload"] as SimRuntimeWorkload
         return workload.utilization
     }
 
-    fun tryToMigrate(hv: HostView, cpuCount: Int) {
-        var remaining = cpuCount
-        val migrations = mutableListOf<Pair<InternalServer, Host>>()
-        for (server in hostToServers.getOrDefault(hv, mutableListOf()).sortedBy { cpuCount - getRealCpuCount(it) }) {
-            val cluster = server.flavor.meta.getOrDefault("cluster", "") as String
-            val candidateHosts = hosts.filter {
-                it.partitions.contains(cluster) &&
-                    (it.partitions[cluster]!! - it.partitionsUsed[cluster]!!) < server.flavor.cpuCount &&
-                    calculateOversubscription(it, server) <= 0
-            }.sortedBy { -(it.partitions[cluster]!! - it.partitionsUsed[cluster]!!) }
-            if (candidateHosts.size > 0) {
-                migrations.add(Pair(server, candidateHosts[0]))
-                remaining -= getRealCpuCount(server)
-                if (remaining < 0) {
+    fun tryToMigrate(hv: HostView, cpuCount: Int, cluster: String): Int {
+        var migrated = 0
+
+        if (oversubscriptionApi) {
+            migrated += tryToMigrateK8sPods(hv, migrated, cluster)
+        }
+
+        if (migrated < cpuCount) {
+            migrated += tryToMigrateNodes(hv, migrated, cluster)
+        }
+        return migrated
+    }
+
+    fun tryToMigrateK8sPods(hv: HostView, cpuCount: Int, cluster: String): Int {
+        var migrated = 0
+
+        // get nodes sorted by cpu usage and check if pods from there can be migrated
+        for (node in hv.host.k8sNodes[cluster]!!.sortedBy { cpuCount - getNodeActiveCpuCount(it) }){
+            for (pod in node.pods){
+                migrated += tryToMigrateK8sPod(hv, pod, node, cluster)
+                if (cpuCount <= migrated) {
+                    return migrated
+                }
+            }
+        }
+
+        return migrated
+    }
+
+    fun tryToMigrateK8sPod(from: HostView, pod: InternalServer, node: K8sNode, cluster: String): Int {
+        val candidateHosts = hosts.filter { it != from.host && it.k8sNodes.contains(cluster) && calculateOversubscription(hostToView[it]!!, pod) <= 0 }.sortedBy { calculateOversubscription(hostToView[it]!!, pod) }
+
+        if (0 < candidateHosts.size) {
+            val to = hostToView[candidateHosts[0]]!!
+            migratePod(from, to, pod, node)
+            return getPodActiveCpuCount(pod)
+        } else {
+            return 0
+        }
+    }
+
+    fun tryToMigrateNodes(hv: HostView, cpuCount: Int, cluster: String): Int {
+        var migrated = 0
+        // get k8s VMs and for every vm sort by size (descending)
+        var nodes = hv.host.k8sNodes.values.flatten()
+        nodes = nodes.sortedBy { cpuCount - getNodeActiveCpuCount(it) }
+        for (node in nodes) {
+            // try to migrate k8s node
+            migrated += tryToMigrateK8sNode(hv, node)
+            if (cpuCount <= migrated) {
+                break
+            }
+        }
+        return migrated
+    }
+
+    fun getNodeActiveCpuCount(node: K8sNode): Int {
+        var cpuCount = 0
+        for (pod in node.pods) {
+            cpuCount += getPodActiveCpuCount(pod)
+        }
+        return cpuCount
+    }
+
+    fun tryToMigrateK8sNode(from: HostView, node: K8sNode): Int {
+        val nodeServer = nodeToServer(node)
+        val to = nodeScheduler.select(nodeServer)
+
+        if (to != null) {
+            to.host.addK8sNode(node)
+            val pods = node.pods.toMutableList()  // in order to avoid concurrent modifications
+            for (pod in pods) {
+                migratePod(from, to, pod, node)
+            }
+            from.host.removeK8sNode(node)
+            return getNodeActiveCpuCount(node)
+        } else {
+            return 0
+        }
+    }
+
+    fun nodeToServer(node: K8sNode): Server {
+        var cpuCount = 0
+        var memorySize = 0L
+        var cpuCapacity = 0.0
+
+        for (pod in node.pods) {
+            cpuCount += pod.flavor.cpuCount
+            memorySize += pod.flavor.memorySize
+            cpuCapacity += pod.flavor.meta["cpu-capacity"] as Double
+        }
+
+        cpuCapacity /= node.pods.size  // cpuCapacity is the average of all pods
+
+        val flavor = InternalFlavor(
+            this@K8sComputeService,
+            node.uid,
+            node.name,
+            cpuCount,
+            memorySize,
+            labels = emptyMap(),
+            meta = mapOf("cpu-capacity" to cpuCapacity, "cluster" to node.cluster)
+        )
+
+        val image = images[node.image.uid]!!
+
+        return InternalServer(
+            this@K8sComputeService,
+            node.uid,
+            node.name,
+            flavor,
+            image,
+            flavor.labels.toMutableMap(),
+            flavor.meta.toMutableMap()
+        )
+    }
+
+    fun migratePod(from: HostView, to: HostView, pod: InternalServer, node: K8sNode) {
+        // extract remaining workload
+        val sources = (pod.meta["workload"] as SimRuntimeWorkload).getSources()
+        val amount = (pod.meta["workload"] as SimRuntimeWorkload).getRemainingAmountMean()
+        val utilization = (pod.meta["workload"] as SimRuntimeWorkload).utilization
+
+        // delete from current host
+        pod.host = to.host  // necessary for OnStateChanged call, otherwise removes all the metadata of the server
+        runBlocking {
+            from.host.delete(pod)
+        }
+        removeK8sPod(pod, from, null)
+
+        // add to new host
+        // no need to set duration in workload, remaining sources already contain that information
+        // if sources size is 0, it means it has not started yet
+        pod.meta["workload"] = if (sources.size>0) SimRuntimeWorkload(0L, utilization = utilization, sources = sources)  else pod.meta["workload"] as SimRuntimeWorkload
+        assignPod(to, pod, node)
+    }
+
+    fun addK8sPod(pod: InternalServer, hv: HostView, node: K8sNode?) {
+        var node = node
+        val cluster = pod.meta["cluster"]!!
+
+        if (node == null){
+            val nodes = hv.host.k8sNodes[cluster]!!.sortedBy { -it.availableCpuCount }  // TODO: decide how to choose node, must in the same as K8sPodScheduler
+            for (candidate in nodes){
+                if (pod.flavor.cpuCount <= candidate.availableCpuCount){  // TODO: check memory?
+                    node = candidate
                     break
                 }
             }
         }
 
-        for (migration in migrations) {
-            migration.first.host = migration.second
-            val workload = migration.first.flavor.meta["workload"] as SimRuntimeWorkload
-            migration.first.flavor.meta["workload"] = SimRuntimeWorkload(0, utilization = workload.utilization, sources = workload.getSources())
-
-            migration.first.stop()
+        if (node == null){
+            throw Exception("failed to add K8s pod to node")
         }
-        assignServer(hostToView[migration.second]!!, migration.first)
+
+        node.availableCpuCount -= pod.flavor.cpuCount
+        node.availableMemory -= pod.flavor.memorySize
+        node.pods.add(pod)
     }
 
-    fun addHostMapping(server: InternalServer, hv: HostView) {
-        val servers = hostToServers.getOrDefault(hv, mutableListOf())
-        servers.add(server)
-        hostToServers[hv] = servers
-    }
+    fun removeK8sPod(pod: InternalServer, hv: HostView, node: K8sNode?) {
+        var node = node
+        val cluster = pod.meta["cluster"]!!
 
-    fun deleteHostMapping(server: InternalServer, hv: HostView) {
-        hostToServers[hv]?.remove(server)
-    }
+        if (node == null){
+            for (candidate in hv.host.k8sNodes[cluster]!!){
+                if (candidate.pods.contains(pod)){
+                    node = candidate
+                    break
+                }
+            }
+        }
 
+        if (node == null){
+            throw Exception("failed to add K8s pod to node")
+        }
 
-    fun addK8sPartition(server: Server, host: Host) {
-        val cluster: String = server.flavor.meta["cluster"] as String
-        if (cluster == "") {
-            return
-        }
-        val used = host.partitionsUsed[cluster]
-        if (used != null) {
-            host.partitionsUsed[cluster] = used + server.flavor.cpuCount
-        }
-    }
-
-    fun freeK8sPartition(server: Server, host: Host) {
-        val cluster: String = server.flavor.meta["cluster"] as String
-        if (cluster == "") {
-            return
-        }
-        val used = host.partitionsUsed[cluster]
-        if (used != null) {
-            host.partitionsUsed[cluster] = used - server.flavor.cpuCount
-        }
+        node.availableCpuCount += pod.flavor.cpuCount
+        node.availableMemory += pod.flavor.memorySize
+        node.pods.remove(pod)
     }
 
     override fun onStateChanged(host: Host, server: Server, newState: ServerState) {
@@ -584,8 +707,7 @@ internal class K8sComputeService(
                 hv.provisionedCores -= server.flavor.cpuCount
                 hv.instanceCount--
                 hv.availableMemory += server.flavor.memorySize
-                deleteHostMapping(server, hv)
-                freeK8sPartition(server, hv.host)
+                removeK8sPod(server, hv, null)
             } else {
                 logger.error { "Unknown host $host" }
             }
