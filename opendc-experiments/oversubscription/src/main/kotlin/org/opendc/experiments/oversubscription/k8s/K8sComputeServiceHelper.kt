@@ -35,7 +35,7 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
     /**
      * The [ComputeService] that has been configured by the manager.
      */
-    public val service: ComputeService
+    public val service: K8sComputeService
 
     /**
      * The [FlowEngine] to simulate the hosts.
@@ -59,7 +59,7 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
         val client = service.newClient()
 
         assignClustersToTrace(k8sTopology, trace)
-        assignClustersToHosts(client, k8sTopology, oversubscription)
+        scheduleNodesToHosts(client, k8sTopology, oversubscription)
 
         // Create new image for the virtual machine
         val image = client.newImage("pod-image")
@@ -142,23 +142,15 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
         }
     }
 
-    public suspend fun assignClustersToHosts(client: ComputeClient, topology: Topology, oversubscription: Float){
-        var remaining : MutableMap<SimHost, Int> = mutableMapOf()
-        for (host in hosts){
-            remaining[host] = (host.model.cpuCount * oversubscription).toInt()
-        }
-
+    public suspend fun scheduleNodesToHosts(client: ComputeClient, topology: Topology, oversubscription: Float){
+        val nodes = mutableListOf<K8sNode>()
         val image = client.newImage("node-image")
 
         val random = Random(0)
         val vms = topology.resolve()
+
         for (vm in vms){
             hosts.shuffle(random)
-            var assigned = false
-            for (host in hosts){
-                val remaingCpuCount = remaining[host]!!
-                if (vm.model.cpus.size<=remaingCpuCount){
-                    remaining[host] = remaingCpuCount - vm.model.cpus.size
                     val node = K8sNode(
                         cluster = vm.cluster,
                         uid = vm.uid,
@@ -169,16 +161,11 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
                         availableMemory = vm.model.memory.sumOf { it.size },
                         pods = mutableListOf()
                     )
-                    host.addK8sNode(node)
-                    assigned = true
-                    break
-                }
+            nodes.add(node)
             }
-            if (!assigned){
-                throw K8sException("unable to assign cluster")
-            }
+
+            service.scheduleK8sNodes(nodes, oversubscription)
         }
-    }
 
     /**
      * Register a host for this simulation.
@@ -222,7 +209,7 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
     /**
      * Construct a [ComputeService] instance.
      */
-    private fun createService(nodeScheduler: ComputeScheduler, podScheduler: ComputeScheduler, schedulingQuantum: Duration): ComputeService {
+    private fun createService(nodeScheduler: ComputeScheduler, podScheduler: ComputeScheduler, schedulingQuantum: Duration): K8sComputeService {
         val meterProvider = telemetry.createMeterProvider(podScheduler)
         return K8sComputeService(context, clock, meterProvider, nodeScheduler=nodeScheduler,podScheduler= podScheduler, schedulingQuantum)
     }

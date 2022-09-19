@@ -372,6 +372,8 @@ class K8sComputeService(
         pacer.enqueue()
     }
 
+
+
     /**
      * Run a single scheduling iteration.
      */
@@ -421,6 +423,8 @@ class K8sComputeService(
         }
         queue = newQueue
     }
+
+
 
     private fun assignPod(hv: HostView, pod: InternalServer, node: K8sNode? = null) {
         val host = hv.host
@@ -682,6 +686,34 @@ class K8sComputeService(
         node.availableCpuCount += pod.flavor.cpuCount
         node.availableMemory += pod.flavor.memorySize
         node.pods.remove(pod)
+    }
+
+    public suspend fun scheduleK8sNodes(nodes: List<K8sNode>, oversubscription: Float){
+        var remainingCpuCount : MutableMap<Host, Int> = mutableMapOf()
+
+        for (host in hosts){
+            remainingCpuCount[host] = (host.model.cpuCount * oversubscription).toInt()
+        }
+
+        val hostList = hosts.toMutableList()
+        val random = Random(0)
+
+        for (node in nodes){
+            hostList.shuffle(random)
+            var assigned = false
+            for (host in hosts){
+                val remaingCpuCount = remainingCpuCount[host]!!
+                if (node.cpuCount<=remaingCpuCount){
+                    remainingCpuCount[host] = remaingCpuCount - node.cpuCount
+                    host.addK8sNode(node)
+                    assigned = true
+                    break
+                }
+            }
+            if (!assigned){
+                throw K8sException("unable to assign cluster")
+            }
+        }
     }
 
     override fun onStateChanged(host: Host, server: Server, newState: ServerState) {
