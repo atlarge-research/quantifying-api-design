@@ -27,6 +27,13 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
     val oversubscriptionRatio : Float by anyOf(1.5F)
 
     private val vmPlacements by anyOf(emptyMap<String, String>())
+    private val migration: Boolean by anyOf(
+        false,
+    )
+    private val oversubscriptionApi: Boolean by anyOf(
+        false,
+    )
+
     private val nodeAllocationPolicy: String by anyOf(
         "provisioned-cores",
     )
@@ -64,7 +71,9 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
             nodeScheduler = k8sNodeScheduler,
             podScheduler = k8sPodScheduler,
             k8sTopology = k8sTopology,
-            oversubscription = oversubscriptionRatio
+            oversubscription = oversubscriptionRatio,
+            oversubscriptionApi = oversubscriptionApi,
+            migration= migration,
         )
 
         try{

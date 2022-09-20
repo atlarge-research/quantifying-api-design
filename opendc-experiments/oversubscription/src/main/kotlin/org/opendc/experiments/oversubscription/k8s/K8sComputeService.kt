@@ -64,7 +64,8 @@ class K8sComputeService(
     private val nodeScheduler: ComputeScheduler,
     private val podScheduler: ComputeScheduler,
     schedulingQuantum: Duration,
-    private val oversubscriptionApi: Boolean = false
+    private val oversubscriptionApi: Boolean = false,
+    private val migration: Boolean = false,
 ) : ComputeService, HostListener {
     /**
      * The [CoroutineScope] of the service bounded by the lifecycle of the service.
@@ -412,9 +413,11 @@ class K8sComputeService(
             _schedulingLatency.record(now - request.submitTime, server.attributes)
 
 
-            val oversubscription = calculateOversubscription(hv, server)
-            if (oversubscription > 0) {
-                tryToMigrate(hv, oversubscription, server.meta["cluster"]!! as String)
+            if (migration){
+                val oversubscription = calculateOversubscription(hv, server)
+                if (oversubscription > 0) {
+                    tryToMigrate(hv, oversubscription, server.meta["cluster"]!! as String)
+                }
             }
 
             logger.info { "Assigned server $server to host ${hv.host}." }
@@ -625,9 +628,10 @@ class K8sComputeService(
 
     fun migratePod(from: HostView, to: HostView, pod: InternalServer, node: K8sNode) {
         // extract remaining workload
-        val sources = (pod.meta["workload"] as SimRuntimeWorkload).getSources()
-        val amount = (pod.meta["workload"] as SimRuntimeWorkload).getRemainingAmountMean()
-        val utilization = (pod.meta["workload"] as SimRuntimeWorkload).utilization
+        val workload = (pod.meta["workload"] as SimRuntimeWorkload)
+        val sources = workload.getSources()
+        val amount = workload.getRemainingAmountMean()
+        val utilization = workload.utilization
 
         // delete from current host
         pod.host = to.host  // necessary for OnStateChanged call, otherwise removes all the metadata of the server
@@ -639,7 +643,7 @@ class K8sComputeService(
         // add to new host
         // no need to set duration in workload, remaining sources already contain that information
         // if sources size is 0, it means it has not started yet
-        pod.meta["workload"] = if (sources.size>0) SimRuntimeWorkload(0L, utilization = utilization, sources = sources)  else pod.meta["workload"] as SimRuntimeWorkload
+        pod.meta["workload"] = if (sources.size>0) SimRuntimeWorkload(0L, utilization = utilization, sources = sources, clock = workload.clock)  else workload
         assignPod(to, pod, node)
     }
 

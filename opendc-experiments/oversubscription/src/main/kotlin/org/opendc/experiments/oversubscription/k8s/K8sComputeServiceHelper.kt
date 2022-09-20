@@ -22,16 +22,20 @@ import java.util.Random
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 
-class K8sComputeServiceHelper(private val context: CoroutineContext,
-                              private val clock: Clock,
-                              private val telemetry: TelemetryManager,
-                              nodeScheduler: ComputeScheduler,
-                              podScheduler: ComputeScheduler,
-                              schedulingQuantum: Duration = Duration.ofMinutes(5),
-                              private val k8sTopology: Topology,
-                              private val oversubscription: Float,
+class K8sComputeServiceHelper(
+    private val context: CoroutineContext,
+    private val clock: Clock,
+    private val telemetry: TelemetryManager,
+    nodeScheduler: ComputeScheduler,
+    podScheduler: ComputeScheduler,
+    schedulingQuantum: Duration = Duration.ofMinutes(5),
+    private val k8sTopology: Topology,
+    private val oversubscription: Float,
+    private val oversubscriptionApi: Boolean,
+    private val migration: Boolean
 ) : AutoCloseable {
     public var hosts: MutableList<SimHost> = mutableListOf()
+
     /**
      * The [ComputeService] that has been configured by the manager.
      */
@@ -83,7 +87,7 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
                     }
 
                     launch {
-                        val workload = SimRuntimeWorkload((entry.stopTime.toEpochMilli()-entry.startTime.toEpochMilli()), 1.0, name = entry.name)
+                        val workload = SimRuntimeWorkload((entry.stopTime.toEpochMilli() - entry.startTime.toEpochMilli()), 1.0, name = entry.name, clock = clock)
 
                         val server = client.newServer(
                             entry.name,
@@ -115,7 +119,6 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
     }
 
 
-
     public fun apply(topology: Topology, optimize: Boolean = false) {
         val hosts = topology.resolve()
         for (spec in hosts) {
@@ -129,43 +132,39 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
         val nodes = topology.resolve()
         val totalCPUS = nodes.sumOf { it.model.cpus.size }
         val clusters = nodes.distinctBy { it.cluster }.map { it.cluster }
-        for (cluster in clusters){
+        for (cluster in clusters) {
             val cpus = nodes.filter { it.cluster == cluster }.sumOf { it.model.cpus.size }
-            val amount = (trace.size * (cpus.toFloat()/totalCPUS.toFloat())).toInt()
-            for (j in i..i+amount-1){
+            val amount = (trace.size * (cpus.toFloat() / totalCPUS.toFloat())).toInt()
+            for (j in i..i + amount - 1) {
                 trace[j].cluster = cluster
             }
             i += amount
         }
-        for (j in i..trace.size-1){
-            trace[j].cluster = clusters[clusters.size-1]
+        for (j in i..trace.size - 1) {
+            trace[j].cluster = clusters[clusters.size - 1]
         }
     }
 
-    public suspend fun scheduleNodesToHosts(client: ComputeClient, topology: Topology, oversubscription: Float){
+    public suspend fun scheduleNodesToHosts(client: ComputeClient, topology: Topology, oversubscription: Float) {
         val nodes = mutableListOf<K8sNode>()
         val image = client.newImage("node-image")
 
-        val random = Random(0)
-        val vms = topology.resolve()
-
-        for (vm in vms){
-            hosts.shuffle(random)
-                    val node = K8sNode(
-                        cluster = vm.cluster,
-                        uid = vm.uid,
-                        name = vm.name,
-                        image = image,
-                        cpuCount = vm.model.cpus.size,
-                        availableCpuCount = vm.model.cpus.size,
-                        availableMemory = vm.model.memory.sumOf { it.size },
-                        pods = mutableListOf()
-                    )
+        for (vm in topology.resolve()) {
+            val node = K8sNode(
+                cluster = vm.cluster,
+                uid = vm.uid,
+                name = vm.name,
+                image = image,
+                cpuCount = vm.model.cpus.size,
+                availableCpuCount = vm.model.cpus.size,
+                availableMemory = vm.model.memory.sumOf { it.size },
+                pods = mutableListOf()
+            )
             nodes.add(node)
-            }
-
-            service.scheduleK8sNodes(nodes, oversubscription)
         }
+
+        service.scheduleK8sNodes(nodes, oversubscription)
+    }
 
     /**
      * Register a host for this simulation.
@@ -211,7 +210,7 @@ class K8sComputeServiceHelper(private val context: CoroutineContext,
      */
     private fun createService(nodeScheduler: ComputeScheduler, podScheduler: ComputeScheduler, schedulingQuantum: Duration): K8sComputeService {
         val meterProvider = telemetry.createMeterProvider(podScheduler)
-        return K8sComputeService(context, clock, meterProvider, nodeScheduler=nodeScheduler,podScheduler= podScheduler, schedulingQuantum)
+        return K8sComputeService(context, clock, meterProvider, nodeScheduler = nodeScheduler, podScheduler = podScheduler, schedulingQuantum, oversubscriptionApi = oversubscriptionApi, migration= migration)
     }
 }
 
@@ -220,13 +219,15 @@ class Waiter() : ServerWatcher {
     val mutex = Mutex()
 
     public override fun onStateChanged(server: Server, newState: ServerState) {
-        when(newState){
+        when (newState) {
             ServerState.TERMINATED -> {
                 mutex.unlock()
             }
+
             ServerState.ERROR -> {
                 mutex.unlock()
             }
+
             else -> {}
         }
     }

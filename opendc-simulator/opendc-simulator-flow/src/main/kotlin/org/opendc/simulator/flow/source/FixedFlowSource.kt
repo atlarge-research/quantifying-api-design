@@ -33,20 +33,23 @@ import kotlin.math.roundToLong
  */
 public class FixedFlowSource(private val amount: Double, private val utilization: Double, private val name :String = "") : FlowSource {
 
+    public var it : Int = 0
+
     init {
         require(amount >= 0.0) { "Amount must be positive" }
         require(utilization > 0.0) { "Utilization must be positive" }
-
     }
 
     public var remainingAmount: Double = amount
     private var lastPull: Long = 0L
+    public var lastConn: FlowConnection? = null
 
     override fun onStart(conn: FlowConnection, now: Long) {
         lastPull = now
     }
 
     override fun onPull(conn: FlowConnection, now: Long): Long {
+        lastConn = conn
         val lastPull = lastPull
         this.lastPull = now
         val delta = (now - lastPull).coerceAtLeast(0)

@@ -24,6 +24,7 @@ package org.opendc.simulator.compute.workload
 
 import org.opendc.simulator.compute.SimMachineContext
 import org.opendc.simulator.flow.source.FixedFlowSource
+import java.time.Clock
 
 /**
  * A [SimWorkload] that models application execution as a single duration.
@@ -36,7 +37,8 @@ public class SimRuntimeWorkload(
     public val utilization: Double = 0.8,
     public val name: String = "",
     public val sources: MutableList<FixedFlowSource> = mutableListOf(),
-    public val amount: Double = 0.0
+    public val amount: Double = 0.0,
+    public val clock: Clock,
 ) : SimWorkload {
 
 
@@ -51,6 +53,7 @@ public class SimRuntimeWorkload(
         if (sources.size != 0) {
             var i = 0
             for (source in sources) {
+                source.it++
                 ctx.cpus[i].startConsumer(lifecycle.waitFor(source))
                 i++
             }
@@ -81,6 +84,7 @@ public class SimRuntimeWorkload(
 
     @JvmName("getSources1")
     public fun getSources(): MutableList<FixedFlowSource> {
+        forceSourceUpdate()
         return sources
     }
 
@@ -89,11 +93,21 @@ public class SimRuntimeWorkload(
             return -1.0
         }
 
-        var remainingAmount: Double = 0.0
+        forceSourceUpdate()
+
+        var remainingAmount = 0.0
         for (source in sources) {
             remainingAmount += source.remainingAmount
         }
 
         return remainingAmount / sources.size
+    }
+
+    private fun forceSourceUpdate(){
+        for (source in sources){
+            if (source.lastConn != null){
+                source.onPull(source.lastConn!!, clock.millis())
+            }
+        }
     }
 }
