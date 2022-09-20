@@ -64,35 +64,35 @@ public fun createK8sNodeScheduler(name: String, seeder: Random, placements: Map<
 public fun createK8sPodScheduler(name: String, seeder: Random, placements: Map<String, String> = emptyMap(), cpuAllocationRatio: Double = 16.0, ramAllocationRatio: Double = 1.5): ComputeScheduler {
     return when (name) {
         "mem" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(RamWeigher(multiplier = 1.0))
         )
         "mem-inv" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(RamWeigher(multiplier = -1.0))
         )
         "core-mem" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(CoreRamWeigher(multiplier = 1.0))
         )
         "core-mem-inv" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(CoreRamWeigher(multiplier = -1.0))
         )
         "active-servers" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(InstanceCountWeigher(multiplier = -1.0))
         )
         "oversubscription" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(K8sOverprovisionWeigher(cpuAllocationRatio, multiplier = 1.5), K8sVCpuWeigher(cpuAllocationRatio, multiplier = 1.0))
         )
         "regular" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = listOf(K8sVCpuWeigher(cpuAllocationRatio, multiplier = 1.0))
         )
         "random" -> FilterScheduler(
-            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(cpuAllocationRatio), RamFilter(ramAllocationRatio)),
+            filters = listOf(K8sFilter(), ComputeFilter(), K8sVCpuFilter(), RamFilter(ramAllocationRatio)),
             weighers = emptyList(),
             subsetSize = Int.MAX_VALUE,
             random = Random(seeder.nextLong())
@@ -110,7 +110,7 @@ public class K8sFilter : HostFilter {
     override fun toString(): String = "K8sFilter"
 }
 
-public class K8sVCpuFilter(private val allocationRatio: Double) : HostFilter {
+public class K8sVCpuFilter : HostFilter {
     override fun test(host: HostView, server: Server): Boolean {
         val requested = server.flavor.cpuCount
 
