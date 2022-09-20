@@ -412,12 +412,9 @@ class K8sComputeService(
             _servers.add(-1, _serversPendingAttr)
             _schedulingLatency.record(now - request.submitTime, server.attributes)
 
-
-            if (migration){
-                val oversubscription = calculateOversubscription(hv, server)
-                if (oversubscription > 0) {
-                    tryToMigrate(hv, oversubscription, server.meta["cluster"]!! as String)
-                }
+            val oversubscription = calculateOversubscription(hv, server)
+            if (oversubscription > 0) {
+                tryToMigrate(hv, oversubscription, server.meta["cluster"]!! as String)
             }
 
             logger.info { "Assigned server $server to host ${hv.host}." }
@@ -513,11 +510,11 @@ class K8sComputeService(
         var migrated = 0
 
         if (oversubscriptionApi) {
-            migrated += tryToMigrateK8sPods(hv, migrated, cluster)
+            migrated += tryToMigrateK8sPods(hv, cpuCount - migrated, cluster)
         }
 
-        if (migrated < cpuCount) {
-            migrated += tryToMigrateNodes(hv, migrated, cluster)
+        if (migration && migrated < cpuCount) {
+            migrated += tryToMigrateNodes(hv, cpuCount - migrated, cluster)
         }
         return migrated
     }

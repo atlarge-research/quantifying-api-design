@@ -28,10 +28,11 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
 
     private val vmPlacements by anyOf(emptyMap<String, String>())
     private val migration: Boolean by anyOf(
-        false,
+        true,
     )
+
     private val oversubscriptionApi: Boolean by anyOf(
-        false,
+        true,
     )
 
     private val nodeAllocationPolicy: String by anyOf(
@@ -73,7 +74,7 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
             k8sTopology = k8sTopology,
             oversubscription = oversubscriptionRatio,
             oversubscriptionApi = oversubscriptionApi,
-            migration= migration,
+            migration = migration,
         )
 
         try{
