@@ -32,6 +32,7 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
     )
 
     private val oversubscriptionApi: Boolean by anyOf(
+        true,
         false,
     )
 
@@ -52,7 +53,7 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
         val workload = workloadTrace.resolve(workloadLoader, seeder)
         val exporter = ParquetComputeMetricExporter(
             File("output/${workloadTrace.name}"),
-            "policy=$nodeAllocationPolicy-ratio=$oversubscriptionRatio",
+            "api=$oversubscriptionApi-ratio=$oversubscriptionRatio",
             4096
         )
         val topology = clusterTopology(File("src/main/resources/topology", "${workloadTrace.name}-base.txt"), sample = topologySample)
