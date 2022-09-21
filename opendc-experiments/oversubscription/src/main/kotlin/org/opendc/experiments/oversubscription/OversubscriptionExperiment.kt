@@ -30,8 +30,9 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
     private val migration: Boolean by anyOf(
         true,
     )
+
     private val oversubscriptionApi: Boolean by anyOf(
-        true,
+        false,
     )
 
     private val nodeAllocationPolicy: String by anyOf(

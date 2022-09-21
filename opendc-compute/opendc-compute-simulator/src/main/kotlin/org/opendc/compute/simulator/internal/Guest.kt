@@ -83,13 +83,13 @@ public class Guest(
     public suspend fun start() {
         when (state) {
             ServerState.TERMINATED, ServerState.ERROR -> {
-                logger.info { "User requested to start server ${server.uid}" }
+                logger.info { "User requested to start guest ${server.uid}" }
                 doStart()
             }
             ServerState.RUNNING -> return
             ServerState.DELETED -> {
-                logger.warn { "User tried to start deleted server" }
-                throw IllegalArgumentException("Server is deleted")
+                logger.warn { "User tried to start deleted guest" }
+                throw IllegalArgumentException("Guest ${server.uid} is deleted")
             }
             else -> assert(false) { "Invalid state transition" }
         }

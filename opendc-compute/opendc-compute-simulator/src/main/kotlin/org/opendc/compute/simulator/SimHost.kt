@@ -240,6 +240,7 @@ public class SimHost(
     override suspend fun delete(server: Server) {
         val guest = guests[server] ?: return
         guest.delete()
+        this.guests.remove(guest.server)
     }
 
     override fun addListener(listener: HostListener) {
@@ -388,7 +389,6 @@ public class SimHost(
                 ServerState.ERROR -> error++
                 ServerState.DELETED -> {
                     // Remove guests that have been deleted
-                    this.guests.remove(guest.server)
                     guests.remove()
                 }
                 else -> invalid++

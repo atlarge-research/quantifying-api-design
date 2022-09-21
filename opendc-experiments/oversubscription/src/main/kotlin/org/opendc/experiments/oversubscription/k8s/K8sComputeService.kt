@@ -585,7 +585,7 @@ class K8sComputeService(
 
         if (to != null) {
             to.host.addK8sNode(node)
-            val pods = node.pods.toMutableList()  // in order to avoid concurrent modifications
+            val pods = node.pods.toList()  // in order to avoid concurrent modifications
             for (pod in pods) {
                 migratePod(from, to, pod, node)
             }
