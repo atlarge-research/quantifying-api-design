@@ -164,6 +164,7 @@ public class Guest(
         onStart()
 
         job.invokeOnCompletion { cause ->
+            _stopTime = clock.millis()
             this.job = null
             onStop(if (cause != null && cause !is CancellationException) ServerState.ERROR else ServerState.TERMINATED)
         }
@@ -244,6 +245,7 @@ public class Guest(
     }
 
     private var _bootTime = Long.MIN_VALUE
+    private var _stopTime = Long.MIN_VALUE
 
     /**
      * Helper function to track the boot time of the guest.
@@ -251,6 +253,15 @@ public class Guest(
     public fun collectBootTime(result: ObservableLongMeasurement) {
         if (_bootTime != Long.MIN_VALUE) {
             result.record(_bootTime, attributes)
+        }
+    }
+
+    /**
+     * Helper function to track the boot time of the guest.
+     */
+    public fun collectStopTime(result: ObservableLongMeasurement) {
+        if (_stopTime != Long.MIN_VALUE) {
+            result.record(_stopTime, attributes)
         }
     }
 

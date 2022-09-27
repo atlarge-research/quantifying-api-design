@@ -119,4 +119,7 @@ public data class K8sNode(
     var availableCpuCount: Int,
     var availableMemory: Long,
     var pods : MutableList<InternalServer>,
-)
+){
+    override fun toString(): String = "Node[cluster=$cluster,name=$name,uuid=$uid]"
+}
+

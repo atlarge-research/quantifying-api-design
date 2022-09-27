@@ -337,12 +337,12 @@ class K8sComputeService(
         scope.cancel()
     }
 
-    override fun schedule(server: InternalServer): SchedulingRequest {
-        logger.debug { "Enqueueing server ${server.uid} to be assigned to host." }
+    override fun schedule(pod: InternalServer): SchedulingRequest {
+        logger.debug { "[${clock.instant()}] Enqueueing pod $pod to be assigned to host." }
         val now = clock.millis()
-        val request = SchedulingRequest(server, now)
+        val request = SchedulingRequest(pod, now)
 
-        server.lastProvisioningTimestamp = now
+        pod.lastProvisioningTimestamp = now
         queue.add(request)
         _servers.add(1, _serversPendingAttr)
         requestSchedulingCycle()
@@ -387,19 +387,19 @@ class K8sComputeService(
                 continue
             }
 
-            val server = request.server
+            val pod = request.server
             val hv = podScheduler.select(request.server)
-            if (hv == null || !hv.host.canFit(server)) {
-                logger.trace { "Server $server selected for scheduling but no capacity available for it at the moment" }
+            if (hv == null || !hv.host.canFit(pod)) {
+                logger.trace { "Pod $pod selected for scheduling but no capacity available for it at the moment" }
 
-                if (server.flavor.memorySize > maxMemory || server.flavor.cpuCount > maxCores) {
+                if (pod.flavor.memorySize > maxMemory || pod.flavor.cpuCount > maxCores) {
                     // Remove the incoming image
                     _servers.add(-1, _serversPendingAttr)
                     _schedulingAttempts.add(1, _schedulingAttemptsFailureAttr)
 
-                    logger.warn { "Failed to spawn $server: does not fit [${clock.instant()}]" }
+                    logger.warn { "Failed to spawn $pod: does not fit [${clock.instant()}]" }
 
-                    server.state = ServerState.TERMINATED
+                    pod.state = ServerState.TERMINATED
                     continue
                 } else {
                     newQueue.add(request)
@@ -409,16 +409,20 @@ class K8sComputeService(
 
             // Remove request from pendings
             _servers.add(-1, _serversPendingAttr)
-            _schedulingLatency.record(now - request.submitTime, server.attributes)
+            _schedulingLatency.record(now - request.submitTime, pod.attributes)
 
-            val oversubscription = calculateOversubscription(hv, server)
+            val oversubscription = calculateOversubscription(hv, pod)
             if (oversubscription > 0) {
-                val migrated = tryToMigrate(hv, oversubscription, server)
-                logger.info { "Migrated $migrated CPUs." }
+                val migrated = tryToMigrate(hv, oversubscription, pod)
+                if (oversubscription<=migrated){
+                    logger.info { "Oversubscription avoided in $hv- migrated $migrated CPUs out of $oversubscription." }
+                }else{
+                    logger.info { "Oversubscribed $hv- migrated $migrated CPUs out of $oversubscription." }
+                }
             }
 
-            assignPod(hv, server)
-            logger.info { "Assigned pod $server to host ${hv.host}." }
+            assignPod(hv, pod)
+            logger.info { "[${clock.instant()}] Assigned pod $pod to host $hv." }
         }
         queue = newQueue
     }
@@ -441,9 +445,8 @@ class K8sComputeService(
 
                 _servers.add(1, _serversActiveAttr)
                 _schedulingAttempts.add(1, _schedulingAttemptsSuccessAttr)
-                logger.info { "Assigned server $pod to host ${hv.host}." }
             } catch (e: Throwable) {
-                logger.error(e) { "Failed to deploy VM" }
+                logger.error(e) { "Failed to deploy Pod $pod" }
 
                 hv.instanceCount--
                 hv.provisionedCores -= pod.flavor.cpuCount
@@ -509,7 +512,7 @@ class K8sComputeService(
         var migrated = 0
 
         if (oversubscriptionApi) {
-            migrated += tryToMigrateK8sPods(hv, cpuCount - migrated, newPod)
+            migrated += tryToMigratePods(hv, cpuCount - migrated, newPod)
         }
 
         if (migration && migrated < cpuCount) {
@@ -518,7 +521,7 @@ class K8sComputeService(
         return migrated
     }
 
-    fun tryToMigrateK8sPods(hv: HostView, cpuCount: Int, newPod: InternalServer): Int {
+    fun tryToMigratePods(hv: HostView, cpuCount: Int, newPod: InternalServer): Int {
         val cluster = newPod.meta["cluster"]!! as String
         var migrated = 0
 
@@ -526,7 +529,7 @@ class K8sComputeService(
         for (node in hv.host.k8sNodes[cluster]!!.sortedBy { cpuCount - getNodeActiveCpuCount(it) }) {
             val pods = node.pods.toList()
             for (pod in pods) {
-                migrated += tryToMigrateK8sPod(hv, pod, node, cluster)
+                migrated += tryToMigratePod(hv, pod, node, cluster)
                 if (cpuCount <= migrated) {
                     return migrated
                 }
@@ -536,16 +539,17 @@ class K8sComputeService(
         return migrated
     }
 
-    fun tryToMigrateK8sPod(from: HostView, pod: InternalServer, node: K8sNode, cluster: String): Int {
+    fun tryToMigratePod(from: HostView, pod: InternalServer, node: K8sNode, cluster: String): Int {
         val candidateHosts = hosts.filter {
             it != from.host &&
             K8sFilter().test(hostToView[it]!!, pod) && K8sVCpuFilter().test(hostToView[it]!!, pod) &&
             calculateOversubscription(hostToView[it]!!, pod) <= 0
         }.sortedBy { calculateOversubscription(hostToView[it]!!, pod) }
 
-        if (0 < candidateHosts.size) {
-            val to = hostToView[candidateHosts[0]]!!
+        if (candidateHosts.isNotEmpty()) {
+            val to = hostToView[candidateHosts.first()]!!
             migratePod(from, to, pod)
+            logger.info { "[${clock.instant()}]  Pod migration - pod $pod to host $to." }
             return getPodActiveCpuCount(pod)
         } else {
             return 0
@@ -563,7 +567,7 @@ class K8sComputeService(
                 continue
             }
             // try to migrate k8s node
-            migrated += tryToMigrateK8sNode(hv, node)
+            migrated += tryToMigrateNode(hv, node)
             if (cpuCount <= migrated) {
                 break
             }
@@ -579,7 +583,7 @@ class K8sComputeService(
         return cpuCount
     }
 
-    fun tryToMigrateK8sNode(from: HostView, node: K8sNode): Int {
+    fun tryToMigrateNode(from: HostView, node: K8sNode): Int {
         val nodeServer = nodeToServer(node)
         val to = nodeScheduler.select(nodeServer)
 
@@ -588,8 +592,10 @@ class K8sComputeService(
             val pods = node.pods.toList()  // in order to avoid concurrent modifications
             for (pod in pods) {
                 migratePod(from, to, pod, node)
+                logger.info { "[${clock.instant()}] Node migration - pod $pod to host $to." }
             }
             from.host.removeK8sNode(node)
+            logger.info { "Node migration - node $node to host $to." }
             return getNodeActiveCpuCount(node)
         } else {
             return 0
@@ -651,7 +657,6 @@ class K8sComputeService(
         // if sources size is 0, it means it has not started yet
         pod.meta["workload"] = if (sources.size > 0) SimRuntimeWorkload(0L, utilization = utilization, sources = sources, clock = workload.clock) else workload
         assignPod(to, pod, node)
-        logger.info { "Migrated pod $pod to host ${to.host}." }
     }
 
     fun addK8sPod(pod: InternalServer, hv: HostView, node: K8sNode?) {
@@ -754,7 +759,7 @@ class K8sComputeService(
         server.state = newState
 
         if (newState == ServerState.TERMINATED || newState == ServerState.DELETED) {
-            logger.info { "[${clock.instant()}] Server ${server.uid} ${server.name} ${server.flavor} finished." }
+            logger.info { "[${clock.instant()}] Pod $server ${server.flavor} finished." }
 
             if (activeServers.remove(server) != null) {
                 _servers.add(-1, _serversActiveAttr)

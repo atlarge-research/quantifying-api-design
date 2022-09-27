@@ -1,5 +1,6 @@
 package org.opendc.experiments.oversubscription
 
+import kotlinx.coroutines.delay
 import mu.KotlinLogging
 import org.opendc.compute.workload.export.parquet.ParquetComputeMetricExporter
 import org.opendc.compute.workload.telemetry.SdkTelemetryManager
@@ -81,6 +82,10 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
         try{
             runner.apply(topology)
             runner.run(workload, seeder.nextLong())
+
+            // collect all remaining metrics that are in the buffer
+            val metrics = telemetry.metricProducer.collectAllMetrics()
+            exporter.export(metrics)
 
             val serviceMetrics = collectServiceMetrics(telemetry.metricProducer)
             logger.debug {

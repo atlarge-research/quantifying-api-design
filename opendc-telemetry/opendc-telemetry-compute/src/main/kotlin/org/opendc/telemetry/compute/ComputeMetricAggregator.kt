@@ -192,6 +192,15 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+                "system.time.stop" -> {
+                    for (point in metric.longGaugeData.points) {
+                        val server = getServer(servers, point)
+
+                        if (server != null) {
+                            server._stopTime = Instant.ofEpochMilli(point.value)
+                        }
+                    }
+                }
                 "system.time.provision" -> {
                     for (point in metric.longGaugeData.points) {
                         val server = getServer(servers, point) ?: continue
@@ -462,6 +471,10 @@ public class ComputeMetricAggregator {
         override val bootTime: Instant?
             get() = _bootTime
         @JvmField var _bootTime: Instant? = null
+
+        override val stopTime: Instant?
+            get() = _stopTime
+        @JvmField var _stopTime: Instant? = null
 
         override val cpuLimit: Double
             get() = _cpuLimit

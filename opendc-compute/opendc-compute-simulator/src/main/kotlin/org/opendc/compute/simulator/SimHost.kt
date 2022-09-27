@@ -116,6 +116,7 @@ public class SimHost(
      */
     private val guests = HashMap<Server, Guest>()
     private val _guests = mutableListOf<Guest>()
+    private var _stopped_guests = mutableListOf<Guest>()
 
     override val state: HostState
         get() = _state
@@ -145,10 +146,6 @@ public class SimHost(
     init {
         launch()
 
-        meter.upDownCounterBuilder("system.guests")
-            .setDescription("Number of guests on this host")
-            .setUnit("1")
-            .buildWithCallback(::collectGuests)
         meter.gaugeBuilder("system.cpu.limit")
             .setDescription("Amount of CPU resources available to the host")
             .buildWithCallback(::collectCpuLimit)
@@ -188,6 +185,15 @@ public class SimHost(
             .setUnit("1")
             .ofLongs()
             .buildWithCallback(::collectBootTime)
+        meter.gaugeBuilder("system.time.stop")
+            .setDescription("The stop time of the guests")
+            .setUnit("1")
+            .ofLongs()
+            .buildWithCallback(::collectStopTime)
+        meter.upDownCounterBuilder("system.guests")
+            .setDescription("Number of guests on this host")
+            .setUnit("1")
+            .buildWithCallback(::collectGuests)
     }
 
     override fun canFit(server: Server): Boolean {
@@ -389,6 +395,7 @@ public class SimHost(
                 ServerState.ERROR -> error++
                 ServerState.DELETED -> {
                     // Remove guests that have been deleted
+                    _stopped_guests.add(guest)
                     guests.remove()
                 }
                 else -> invalid++
@@ -495,6 +502,17 @@ public class SimHost(
         for (i in guests.indices) {
             guests[i].collectBootTime(result)
         }
+    }
+
+    /**
+     * Helper function to track the stop time of a machine.
+     */
+    private fun collectStopTime(result: ObservableLongMeasurement) {
+        val guests = _stopped_guests
+        for (i in guests.indices) {
+            guests[i].collectStopTime(result)
+        }
+        _stopped_guests = mutableListOf()
     }
 
     public override fun addK8sNode(node :K8sNode){

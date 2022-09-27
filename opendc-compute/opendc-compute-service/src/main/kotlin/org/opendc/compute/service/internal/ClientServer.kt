@@ -109,5 +109,5 @@ public class ClientServer(private val delegate: Server) : Server, ServerWatcher 
 
     override fun hashCode(): Int = uid.hashCode()
 
-    override fun toString(): String = "Server[uid=$uid,name=$name,state=$state]"
+    override fun toString(): String = "Server[name=$name,state=$state,uid=$uid]"
 }

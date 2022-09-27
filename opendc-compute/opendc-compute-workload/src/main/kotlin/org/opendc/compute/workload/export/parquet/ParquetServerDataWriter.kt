@@ -56,6 +56,11 @@ public class ParquetServerDataWriter(path: File, bufferSize: Int) :
         builder["uptime"] = data.uptime
         builder["downtime"] = data.downtime
         builder["boot_time"] = data.bootTime?.toEpochMilli()
+        if (data.stopTime != null){
+            builder["stop_time"] = data.stopTime?.toEpochMilli()
+        }else{
+            builder["stop_time"] = 0
+        }
         builder["provision_time"] = data.provisionTime?.toEpochMilli()
 
         builder["cpu_count"] = data.server.cpuCount
@@ -82,6 +87,7 @@ public class ParquetServerDataWriter(path: File, bufferSize: Int) :
             .requiredLong("downtime")
             .name("provision_time").type(TIMESTAMP_SCHEMA.optional()).noDefault()
             .name("boot_time").type(TIMESTAMP_SCHEMA.optional()).noDefault()
+            .name("stop_time").type(TIMESTAMP_SCHEMA.optional()).noDefault()
             .requiredInt("cpu_count")
             .requiredDouble("cpu_limit")
             .requiredLong("cpu_time_active")

@@ -64,6 +64,11 @@ public interface ServerTableReader {
     public val bootTime: Instant?
 
     /**
+     * The [Instant] at which the server stopped.
+     */
+    public val stopTime: Instant?
+
+    /**
      * The capacity of the CPUs of the servers (in MHz).
      */
     public val cpuLimit: Double

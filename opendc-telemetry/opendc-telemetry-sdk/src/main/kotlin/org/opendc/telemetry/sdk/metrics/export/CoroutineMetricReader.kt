@@ -51,7 +51,6 @@ public class CoroutineMetricReader private constructor(
     private val exportInterval: Duration
 ) : MetricReader {
     private val logger = KotlinLogging.logger {}
-
     /**
      * The background job that is responsible for collecting the metrics every cycle.
      */

@@ -40,5 +40,5 @@ public class HostView(public val host: Host) {
     public var availableMemory: Long = host.model.memoryCapacity
     public var provisionedCores: Int = 0
 
-    override fun toString(): String = "HostView[host=$host]"
+    override fun toString(): String = "HostView[host=$host,provisionedCores=$provisionedCores]"
 }
