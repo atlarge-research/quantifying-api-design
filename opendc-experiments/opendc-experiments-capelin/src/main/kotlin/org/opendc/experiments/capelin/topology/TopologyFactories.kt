@@ -35,6 +35,7 @@ import org.opendc.simulator.compute.power.SimplePowerDriver
 import java.io.File
 import java.io.InputStream
 import java.util.*
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
@@ -75,7 +76,7 @@ fun clusterTopology(
                     listOf(unknownMemoryUnit)
                 )
 
-                repeat((cluster.hostCount*sample).toInt()) {
+                repeat(((cluster.hostCount*cluster.cpuSpeed*sample)/cluster.cpuSpeed).roundToInt()) {
                     val spec = HostSpec(
                         UUID(random.nextLong(), it.toLong()),
                         "node-${cluster.name}-$it",

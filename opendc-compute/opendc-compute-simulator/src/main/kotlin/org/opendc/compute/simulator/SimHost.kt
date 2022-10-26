@@ -344,7 +344,7 @@ public class SimHost(
      */
     private fun Flavor.toMachineModel(): MachineModel {
         val originalCpu = machine.model.cpus[0]
-        val cpuCapacity = ((this.meta["cpu-capacity"] as? Double ?: Double.MAX_VALUE) / this.cpuCount).coerceAtMost(originalCpu.frequency)
+        val cpuCapacity = ((this.meta["cpu-capacity"] as? Double ?: Double.MAX_VALUE) / this.cpuCount)
         val processingNode = originalCpu.node.copy(coreCount = cpuCount)
         val processingUnits = (0 until cpuCount).map { originalCpu.copy(id = it, node = processingNode, frequency = cpuCapacity) }
         val memoryUnits = listOf(MemoryUnit("Generic", "Generic", 3200.0, memorySize))

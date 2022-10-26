@@ -102,7 +102,7 @@ internal class OdcVmResourceTableReader(private val reader: LocalParquetReader<G
 
         return when (index) {
             COL_CPU_CAPACITY -> if (AVRO_COL_CPU_CAPACITY >= 0) (record[AVRO_COL_CPU_CAPACITY] as Number).toDouble() else 0.0
-            COL_CPU_UTILIZATION -> if (AVRO_COL_CPU_UTILIZATION >= 0) (record[AVRO_COL_CPU_UTILIZATION] as Number).toDouble() else -1.0
+            COL_CPU_UTILIZATION -> if (AVRO_COL_CPU_UTILIZATION >= 0) (record[AVRO_COL_CPU_UTILIZATION] as Number).toDouble() else 1.0
             COL_MEM_CAPACITY -> (record[AVRO_COL_MEM_CAPACITY] as Number).toDouble()
             else -> throw IllegalArgumentException("Invalid column")
         }

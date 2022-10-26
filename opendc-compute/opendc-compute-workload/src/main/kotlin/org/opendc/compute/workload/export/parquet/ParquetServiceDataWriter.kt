@@ -36,6 +36,14 @@ public class ParquetServiceDataWriter(path: File, bufferSize: Int) :
     ParquetDataWriter<ServiceTableReader>(path, SCHEMA, bufferSize) {
 
     override fun convert(builder: GenericRecordBuilder, data: ServiceTableReader) {
+        builder["migrations"] = data.migrations
+        builder["migrations_improvement"] = data.migrationsImprovement
+        builder["migrations_penalty"] = data.migrationsPenalty
+        builder["migrations_oversubscription"] = data.migrationsOversubscription
+        builder["attempts_retry"] = data.attemptsRetry
+        builder["migrations_success"] = data.migrationsSuccess
+        builder["migrations_failure"] = data.migrationsFailure
+
         builder["timestamp"] = data.timestamp.toEpochMilli()
         builder["hosts_up"] = data.hostsUp
         builder["hosts_down"] = data.hostsDown
@@ -54,11 +62,18 @@ public class ParquetServiceDataWriter(path: File, bufferSize: Int) :
             .namespace("org.opendc.telemetry.compute")
             .fields()
             .name("timestamp").type(TIMESTAMP_SCHEMA).noDefault()
+            .requiredInt("migrations")
+            .requiredDouble("migrations_improvement")
+            .requiredLong("migrations_penalty")
+            .requiredDouble("migrations_oversubscription")
+            .requiredInt("migrations_success")
+            .requiredInt("migrations_failure")
             .requiredInt("hosts_up")
             .requiredInt("hosts_down")
             .requiredInt("servers_pending")
             .requiredInt("servers_active")
             .requiredInt("attempts_success")
+            .requiredInt("attempts_retry")
             .requiredInt("attempts_failure")
             .requiredInt("attempts_error")
             .endRecord()

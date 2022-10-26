@@ -54,6 +54,22 @@ public class ComputeMetricAggregator {
 
             when (metric.name) {
                 // ComputeService
+                "scheduler.migrations" -> {
+                    val points = metric.doubleGaugeData.points
+                    service._migrations = points.map { it.attributes[AttributeKey.longKey("migration.pods")]!! }.sum()
+                    service._migrationsImprovement = points.sumOf { it.value }
+                    service._migrationsPenalty = points.map { it.attributes[AttributeKey.longKey("migration.penalty")]!! }.sum()
+                    service._migrationsOversubscription = points.map { it.attributes[AttributeKey.doubleKey("migration.oversubscription")]!! }.sum()
+                }
+                "migration.attempts" -> {
+                    for (point in metric.longSumData.points) {
+                        when (point.attributes[RESULT_KEY]) {
+                            "success" -> service._migrationsSuccess = point.value.toInt()
+                            "failure" -> service._migrationsFailure = point.value.toInt()
+                        }
+                    }
+                }
+
                 "scheduler.hosts" -> {
                     for (point in metric.longSumData.points) {
                         // Record the timestamp for the service
@@ -77,6 +93,7 @@ public class ComputeMetricAggregator {
                     for (point in metric.longSumData.points) {
                         when (point.attributes[RESULT_KEY]) {
                             "success" -> service._attemptsSuccess = point.value.toInt()
+                            "retry" -> service._attemptsRetry = point.value.toInt()
                             "failure" -> service._attemptsFailure = point.value.toInt()
                             "error" -> service._attemptsError = point.value.toInt()
                         }
@@ -91,7 +108,7 @@ public class ComputeMetricAggregator {
                         when (point.attributes[STATE_KEY]) {
                             "terminated" -> agg._guestsTerminated = point.value.toInt()
                             "running" -> agg._guestsRunning = point.value.toInt()
-                            "error" -> agg._guestsRunning = point.value.toInt()
+                            "error" -> agg._guestsError = point.value.toInt()
                             "invalid" -> agg._guestsInvalid = point.value.toInt()
                         }
                     }
@@ -257,6 +274,33 @@ public class ComputeMetricAggregator {
      * An aggregator for service metrics before they are reported.
      */
     internal class ServiceAggregator : ServiceTableReader {
+        override val migrations: Long
+            get() = _migrations
+        @JvmField var _migrations = 0L
+        override val migrationsImprovement: Double
+            get() = _migrationsImprovement
+        @JvmField var _migrationsImprovement = 0.0
+
+        override val migrationsPenalty: Long
+            get() = _migrationsPenalty
+        @JvmField var _migrationsPenalty = 0L
+
+        override val migrationsOversubscription: Double
+            get() = _migrationsOversubscription
+        @JvmField var _migrationsOversubscription = 0.0
+
+        override val attemptsRetry: Int
+            get() = _attemptsRetry
+        @JvmField var _attemptsRetry = 0
+
+        override val migrationsSuccess: Int
+            get() = _migrationsSuccess
+        @JvmField var _migrationsSuccess = 0
+
+        override val migrationsFailure: Int
+            get() = _migrationsFailure
+        @JvmField var _migrationsFailure = 0
+
         private var _timestamp: Instant = Instant.MIN
         override val timestamp: Instant
             get() = _timestamp

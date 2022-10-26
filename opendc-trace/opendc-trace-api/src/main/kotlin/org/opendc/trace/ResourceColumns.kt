@@ -62,7 +62,7 @@ public val RESOURCE_CPU_COUNT: TableColumn<Int> = column("resource:cpu_count")
 public val RESOURCE_CPU_CAPACITY: TableColumn<Double> = column("resource:cpu_capacity")
 
 /**
- * Total CPU utilization of the resource in %.
+ * Total CPU utilization of the resource in decimals e.g., 0.4.
  */
 @JvmField
 public val RESOURCE_CPU_UTILIZATION: TableColumn<Double> = column("resource:cpu_utilization")

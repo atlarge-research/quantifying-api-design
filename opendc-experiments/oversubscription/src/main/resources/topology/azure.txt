@@ -1,2 +1,2 @@
 ClusterID;ClusterName;Cores;Speed;Memory;numberOfHosts;memoryCapacityPerHost;coreCountPerHost
-A64;A64;0;2.65;0;50;537;64
+A16;A16;0;2.7;0;8;56;16

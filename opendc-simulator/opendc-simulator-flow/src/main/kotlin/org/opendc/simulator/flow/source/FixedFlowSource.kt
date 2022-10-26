@@ -37,7 +37,9 @@ public class FixedFlowSource(private val amount: Double, private val utilization
 
     init {
         require(amount >= 0.0) { "Amount must be positive" }
-        require(utilization > 0.0) { "Utilization must be positive" }
+        //require(utilization > 0.0) { "Utilization must be positive" }
+        // allow 0 utilization
+        require(utilization >= 0.0) { "Utilization must be positive" }
     }
 
     public var remainingAmount: Double = amount
@@ -61,7 +63,7 @@ public class FixedFlowSource(private val amount: Double, private val utilization
 
         val duration = (remainingAmount / limit * 1000).roundToLong()
 
-        return if (duration > 0) {
+        return if (remainingAmount > 0 && duration > 0) {
             conn.push(limit)
             duration
         } else {

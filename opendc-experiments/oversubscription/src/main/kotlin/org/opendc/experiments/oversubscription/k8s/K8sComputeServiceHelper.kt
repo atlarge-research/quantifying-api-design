@@ -2,6 +2,7 @@ package org.opendc.experiments.oversubscription.k8s
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
+import mu.KotlinLogging
 import org.opendc.compute.api.ComputeClient
 import org.opendc.compute.api.Server
 import org.opendc.compute.api.ServerState
@@ -28,12 +29,14 @@ class K8sComputeServiceHelper(
     private val telemetry: TelemetryManager,
     nodeScheduler: ComputeScheduler,
     podScheduler: ComputeScheduler,
-    schedulingQuantum: Duration = Duration.ofMinutes(5),
+    schedulingQuantum: Duration = Duration.ofSeconds(5),
     private val k8sTopology: Topology,
     private val oversubscription: Float,
     private val oversubscriptionApi: Boolean,
     private val migration: Boolean
 ) : AutoCloseable {
+    private val logger = KotlinLogging.logger {}
+
     public var hosts: MutableList<SimHost> = mutableListOf()
 
     /**
@@ -73,8 +76,8 @@ class K8sComputeServiceHelper(
                 // Start the fault injector
                 var offset = Long.MIN_VALUE
 
+                var i = -1
                 for (entry in trace.sortedBy { it.startTime }) {
-
                     val now = clock.millis()
                     val start = entry.startTime.toEpochMilli()
 
@@ -86,8 +89,18 @@ class K8sComputeServiceHelper(
                         delay(max(0, (start - offset) - now))
                     }
 
+                    // TODO: be careful!
+                    entry.cpuUtilization = 1.0
+
                     launch {
-                        val workload = SimRuntimeWorkload((entry.stopTime.toEpochMilli() - entry.startTime.toEpochMilli()), 1.0, name = entry.name, clock = clock)
+                        val workload = SimRuntimeWorkload(
+                            (entry.stopTime.toEpochMilli() - entry.startTime.toEpochMilli()),
+                            entry.cpuUtilization,
+                            entry.cpuCount,
+                            entry.cpuCapacity,
+                            name = entry.name,
+                            clock = clock
+                        )
 
                         val server = client.newServer(
                             entry.name,
@@ -98,14 +111,13 @@ class K8sComputeServiceHelper(
                                 entry.memCapacity,
                                 meta = mapOf("cpu-capacity" to entry.cpuCapacity)
                             ),
-                            meta = mapOf("workload" to workload, "cluster" to entry.cluster)
+                            meta = mapOf("workload" to workload, "cluster" to entry.cluster, "cpu-capacity" to entry.cpuCapacity)
                         )
                         val w = Waiter()
                         w.mutex.lock()
                         server.watch(w)
                         // Wait for the server reach its end time
                         w.mutex.lock()
-
                         // Delete the server after reaching the end-time of the virtual machine
                         server.delete()
                     }
@@ -126,10 +138,10 @@ class K8sComputeServiceHelper(
         }
     }
 
-    public fun assignClustersToTrace(topology: Topology, trace: List<VirtualMachine>) {
+    public fun assignClustersToTrace(k8sNodesTopology: Topology, trace: List<VirtualMachine>) {
         var i = 0
         val trace = trace.shuffled(Random(0))
-        val nodes = topology.resolve()
+        val nodes = k8sNodesTopology.resolve()
         val totalCPUS = nodes.sumOf { it.model.cpus.size }
         val clusters = nodes.distinctBy { it.cluster }.map { it.cluster }
         for (cluster in clusters) {
@@ -141,21 +153,24 @@ class K8sComputeServiceHelper(
             i += amount
         }
         for (j in i..trace.size - 1) {
-            trace[j].cluster = clusters[clusters.size - 1]
+            trace[j].cluster = clusters[j % clusters.size]
         }
     }
 
-    public suspend fun scheduleNodesToHosts(client: ComputeClient, topology: Topology, oversubscription: Float) {
+    public suspend fun scheduleNodesToHosts(client: ComputeClient, K8sTopology: Topology, oversubscription: Float) {
         val nodes = mutableListOf<K8sNode>()
         val image = client.newImage("node-image")
+        val vms = K8sTopology.resolve()
 
-        for (vm in topology.resolve()) {
+        for (vm in vms) {
             val node = K8sNode(
                 cluster = vm.cluster,
                 uid = vm.uid,
                 name = vm.name,
                 image = image,
                 cpuCount = vm.model.cpus.size,
+                cpuCapacity = vm.model.cpus.sumOf { it.frequency },
+                memory = vm.model.memory.sumOf { it.size },
                 availableCpuCount = vm.model.cpus.size,
                 availableMemory = vm.model.memory.sumOf { it.size },
                 pods = mutableListOf()
@@ -210,7 +225,8 @@ class K8sComputeServiceHelper(
      */
     private fun createService(nodeScheduler: ComputeScheduler, podScheduler: ComputeScheduler, schedulingQuantum: Duration): K8sComputeService {
         val meterProvider = telemetry.createMeterProvider(podScheduler)
-        return K8sComputeService(context, clock, meterProvider, nodeScheduler = nodeScheduler, podScheduler = podScheduler, schedulingQuantum, oversubscriptionApi = oversubscriptionApi, migration= migration)
+        return K8sComputeService(context, clock, meterProvider, nodeScheduler = nodeScheduler, podScheduler = podScheduler, schedulingQuantum,
+            oversubscriptionApi = oversubscriptionApi, oversubscription= (oversubscription).toDouble(), migration= migration)
     }
 }
 

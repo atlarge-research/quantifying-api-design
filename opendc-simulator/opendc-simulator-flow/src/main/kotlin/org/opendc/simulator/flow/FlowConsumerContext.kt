@@ -38,6 +38,8 @@ public interface FlowConsumerContext : FlowConnection {
      */
     public override var capacity: Double
 
+    public override var rate: Double
+
     /**
      * A flag to control whether [FlowConsumerLogic.onConverge] should be invoked for the consumer.
      */

@@ -33,8 +33,10 @@ import java.time.Clock
  * @property utilization The utilization of the application during runtime.
  */
 public class SimRuntimeWorkload(
-    public val duration: Long,
+    public var duration: Long,
     public val utilization: Double = 0.8,
+    public val cpuCount : Int,
+    public val cpuCapacity : Double,
     public val name: String = "",
     public val sources: MutableList<FixedFlowSource> = mutableListOf(),
     public val amount: Double = 0.0,
@@ -44,7 +46,9 @@ public class SimRuntimeWorkload(
 
     init {
         require(duration >= 0) { "Duration must be non-negative" }
-        require(utilization > 0.0 && utilization <= 1.0) { "Utilization must be in (0, 1]" }
+        // require(utilization > 0.0 && utilization <= 1.0) { "Utilization must be in (0, 1]" }
+        // Allow 0 utilization
+        require(utilization in 0.0..1.0) { "Utilization must be in (0, 1]" }
     }
 
     override fun onStart(ctx: SimMachineContext) {
@@ -68,14 +72,13 @@ public class SimRuntimeWorkload(
         } else {
             var i = 0
             for (cpu in ctx.cpus) {
-                val limit = cpu.capacity * utilization
+                val limit = (cpuCapacity/cpuCount) * utilization
                 val source = FixedFlowSource((limit / 1000) * duration, utilization, name + "-$i")
                 sources.add(source)
                 cpu.startConsumer(lifecycle.waitFor(source))
                 i++
             }
         }
-
     }
 
     override fun onStop(ctx: SimMachineContext) {}
@@ -103,7 +106,7 @@ public class SimRuntimeWorkload(
         return remainingAmount / sources.size
     }
 
-    private fun forceSourceUpdate(){
+    public fun forceSourceUpdate(){
         for (source in sources){
             if (source.lastConn != null){
                 source.onPull(source.lastConn!!, clock.millis())

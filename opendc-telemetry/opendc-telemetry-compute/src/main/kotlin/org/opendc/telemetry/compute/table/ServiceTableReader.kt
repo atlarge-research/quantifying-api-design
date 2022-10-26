@@ -29,6 +29,16 @@ import java.time.Instant
  */
 public interface ServiceTableReader {
     /**
+     * The migrations
+     */
+    public val migrations: Long
+    public val migrationsImprovement: Double
+    public val migrationsPenalty: Long
+    public val migrationsOversubscription: Double
+    public val attemptsRetry: Int
+    public val migrationsSuccess: Int
+    public val migrationsFailure: Int
+    /**
      * The timestamp of the current entry of the reader.
      */
     public val timestamp: Instant

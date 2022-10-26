@@ -157,7 +157,9 @@ public class Guest(
         assert(job == null) { "Concurrent job running" }
         val workload = mapper.createWorkload(server)
 
-        val job = scope.launch { runMachine(workload) }
+        val job = scope.launch {
+            runMachine(workload)
+        }
         this.job = job
 
         state = ServerState.RUNNING

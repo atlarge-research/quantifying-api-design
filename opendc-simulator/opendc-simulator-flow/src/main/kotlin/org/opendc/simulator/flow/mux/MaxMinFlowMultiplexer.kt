@@ -451,6 +451,10 @@ public class MaxMinFlowMultiplexer(
 
                 capacity - availableCapacity
             } else {
+                for (i in 0 until inputSize) {
+                    val input = inputArray[i]
+                    input.actualRate = input.limit
+                }
                 demand
             }
 
@@ -581,7 +585,15 @@ public class MaxMinFlowMultiplexer(
         /**
          * The actual processing speed.
          */
-        @JvmField var actualRate: Double = 0.0
+        var actualRate: Double
+            set(value) {
+                _actualRate = value
+                _ctx?.rate = value
+            }
+            get() {
+                return _actualRate
+            }
+        var _actualRate = 0.0
 
         /**
          * The processing rate that is allowed by the model constraints.
@@ -612,6 +624,8 @@ public class MaxMinFlowMultiplexer(
         fun close() {
             _isClosed = true
             cancel()
+            scheduler.deregisterInput(this, engine.clock.millis())
+            // in order to update values
         }
 
         /**

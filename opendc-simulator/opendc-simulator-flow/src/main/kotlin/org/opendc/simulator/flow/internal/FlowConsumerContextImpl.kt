@@ -58,10 +58,20 @@ internal class FlowConsumerContextImpl(
     /**
      * The current processing rate of the connection.
      */
-    override val rate: Double
-        get() = _rate
-    private var _rate = 0.0
+    override var rate: Double
+        get() {
+            return _rate
+        }
+        set(value) {
+            _next_rate = value
 
+            // Only changes will be propagated
+            if (_rate != _next_rate) {
+                pull()
+            }
+        }
+    private var _rate: Double = 0.0
+    private var _next_rate: Double = 0.0
     /**
      * The current flow processing demand.
      */
@@ -302,7 +312,12 @@ internal class FlowConsumerContextImpl(
 
         // Compute the new flow rate of the connection
         // Note: _demand might be changed by [logic.onConsume], so we must re-fetch the value
-        _rate = min(_capacity, _demand)
+        _rate = if (_next_rate <= 0.0) {
+            min(_capacity, _demand)
+        }
+        else{
+            min(min(_capacity, _demand), _next_rate)
+        }
 
         // Indicate that no update is active anymore and flush the flags
         _flags = flags and ConnUpdateActive.inv() and ConnUpdatePending.inv()
@@ -374,7 +389,7 @@ internal class FlowConsumerContextImpl(
         }
     }
 
-    override fun toString(): String = "FlowConsumerContextImpl[capacity=$capacity,rate=$_rate]"
+    override fun toString(): String = "FlowConsumerContextImpl[capacity=$capacity,rate=$rate]"
 
     /**
      * Stop the [FlowSource].
