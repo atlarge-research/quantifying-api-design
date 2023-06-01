@@ -2,14 +2,33 @@
     <img src="https://opendc.org/img/logo.png" alt="OpenDC logo" title="OpenDC" align="right" height="100" />
 </a>
 
-# OpenDC
+# Evaluation of Datacenter Scheduler Programming Abstractions
 
-Collaborative Datacenter Simulation and Exploration for Everybody
+This repository contains the evaluation code and experiments written in Kotlin for the research work titled "The Cost of Simplicity: Understanding Datacenter Scheduler Programming Abstractions" presented at the Middleware 2023 conference. The work investigates the performance impact of various datacenter scheduler programming abstractions.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](/LICENSE.txt)
 [![Documentation](https://img.shields.io/badge/docs-master-green.svg)](./docs)
 [![GitHub release](https://img.shields.io/github/release/atlarge-research/opendc)](https://github.com/atlarge-research/opendc/releases)
 [![Build](https://github.com/atlarge-research/opendc/actions/workflows/build.yml/badge.svg)](https://github.com/atlarge-research/opendc/actions/workflows/build.yml)
+
+## Getting Started
+
+The code for all the specific experiments can be found in the opendc-experiments/scheduling-apis directory of the repository. To run the experiments, make sure to place the relevant traces in the corresponding experiment folder within this directory. For example, an example trace bitbrains-small is provided in the traces directory for your reference.
+
+### Prerequisites
+- Kotlin and Gradle should be installed on your machine.
+
+### Setup Traces
+1. Clone the repository to your local machine.
+2. Navigate to the `opendc-experiments/scheduling-apis` folder.
+3. Place the relevant traces for the experiment you want to run in the corresponding experiment folder.
+
+### Compile and Run
+1. Open the terminal and navigate to the `opendc` project directory.
+2. Run the command `./gradlew :opendc-experiments:<experiment>:experiment` to compile and run the desired experiment.
+
+## OpenDC
+The evaluation experiments are performed using OpenDC, an open-source data center simulation platform. OpenDC allows for accurate and realistic simulations of data center environments, enabling thorough evaluation and analysis of various scheduling APIs and their impact on performance.
 
 -----
 
@@ -36,7 +55,7 @@ with [Capelin](https://repository.tudelft.nl/islandora/object/uuid:d6d50861-86a3
 , the capacity planning tool for cloud datacenters based on portfolios of what-if scenarios. More information on how to
 use and extend Capelin coming soon!
 
-## Documentation
+### Documentation
 
 The documentation is located in the [docs/](docs) directory and is divided as follows:
 
@@ -53,4 +72,4 @@ Please refer to the [contributing guidelines](CONTRIBUTING.md) for more details.
 
 ## License
 
-OpenDC is distributed under the MIT license. See [LICENSE.txt](/LICENSE.txt).
+This work is distributed under the MIT license. See [LICENSE.txt](/LICENSE.txt).
