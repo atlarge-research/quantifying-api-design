@@ -13,15 +13,25 @@ This repository contains the evaluation code and experiments written in Kotlin f
 
 ## Getting Started
 
-The code for all the specific experiments can be found in the opendc-experiments/scheduling-apis directory of the repository. To run the experiments, make sure to place the relevant traces in the corresponding experiment folder within this directory. For example, an example trace bitbrains-small is provided in the traces directory for your reference.
+The code for all the specific experiments can be found in the `opendc-experiments/studying-apis` directory of the repository. To run the experiments, make sure to place the relevant traces in the corresponding experiment folder within this directory. For example, an example trace bitbrains-small is provided in the traces directory for your reference.
 
 ### Prerequisites
 - Kotlin and Gradle should be installed on your machine.
 
 ### Setup Traces
 1. Clone the repository to your local machine.
-2. Navigate to the `opendc-experiments/scheduling-apis` folder.
+2. Navigate to the `opendc-experiments/studying-apis` folder.
 3. Place the relevant traces for the experiment you want to run in the corresponding experiment folder.
+
+Here are the steps for proper trace placing:
+
+1. Download the necessary traces from the following link: https://zenodo.org/record/7996316.
+2. Store the downloaded traces in the directory structure: `opendc-experiments/studying-apis/<experiment>/src/main/resources/trace`.
+3. Create a folder within the `trace` directory with a name corresponding to the source of the trace (e.g., `google`, `azure`, `bitbrains`).
+4. Place the trace Parquet file inside the respective source folder.
+5. Make sure to rename the trace file as `meta.parquet` when copying it.
+
+These steps ensure that the traces are properly organized and available for the evaluation experiments using the OpenDC platform.
 
 ### Compile and Run
 1. Open the terminal and navigate to the `opendc` project directory.
