@@ -179,7 +179,7 @@ class RunnerCli : CliktCommand(name = "runner") {
         val exporter = WebComputeMetricExporter()
 
         try {
-            runBlockingSimulation {
+            runBlockingSimulation(true) {
                 val workloadName = scenario.workload.trace.id
                 val workloadFraction = scenario.workload.samplingFraction
 

@@ -1,0 +1,6 @@
+ClusterID;ClusterName;Cores;Speed;Memory;numberOfHosts;memoryCapacityPerHost;coreCountPerHost
+A0;A0;0;1.83;0;8;1;4
+A1;A1;0;1.83;0;8;1;4
+A2;A2;0;1.83;0;8;1;4
+A3;A3;0;1.83;0;8;1;4
+A4;A4;0;1.83;0;8;1;4

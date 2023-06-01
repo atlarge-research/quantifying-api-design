@@ -25,6 +25,7 @@ package org.opendc.compute.workload.export.parquet
 import io.opentelemetry.sdk.common.CompletableResultCode
 import org.opendc.telemetry.compute.ComputeMetricExporter
 import org.opendc.telemetry.compute.ComputeMonitor
+import org.opendc.telemetry.compute.StorageTableReader
 import org.opendc.telemetry.compute.table.HostTableReader
 import org.opendc.telemetry.compute.table.ServerTableReader
 import org.opendc.telemetry.compute.table.ServiceTableReader
@@ -49,6 +50,11 @@ public class ParquetComputeMetricExporter(base: File, partition: String, bufferS
         bufferSize
     )
 
+    private val storageWriter = ParquetStorageDataWriter(
+        File(base, "storage/$partition/data.parquet").also { it.parentFile.mkdirs() },
+        bufferSize
+    )
+
     override fun record(reader: ServerTableReader) {
         serverWriter.write(reader)
     }
@@ -61,10 +67,15 @@ public class ParquetComputeMetricExporter(base: File, partition: String, bufferS
         serviceWriter.write(reader)
     }
 
+    public override fun record(reader: StorageTableReader) {
+        storageWriter.write(reader)
+    }
+
     override fun shutdown(): CompletableResultCode {
         hostWriter.close()
         serviceWriter.close()
         serverWriter.close()
+        storageWriter.close()
 
         return CompletableResultCode.ofSuccess()
     }

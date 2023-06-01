@@ -146,13 +146,13 @@ public class SimHost(
     init {
         launch()
 
-        meter.gaugeBuilder("system.cpu.limit")
+        /*meter.gaugeBuilder("system.cpu.limit")
             .setDescription("Amount of CPU resources available to the host")
             .buildWithCallback(::collectCpuLimit)
         meter.gaugeBuilder("system.cpu.demand")
             .setDescription("Amount of CPU resources the guests would use if there were no CPU contention or CPU limits")
             .setUnit("MHz")
-            .buildWithCallback { result -> result.record(hypervisor.cpuDemand) }
+            .buildWithCallback { result -> result.record(hypervisor.cpuDemand) }*/
         meter.gaugeBuilder("system.cpu.usage")
             .setDescription("Amount of CPU resources used by the host")
             .setUnit("MHz")
@@ -163,7 +163,7 @@ public class SimHost(
             .buildWithCallback {result -> result.record(
                 hypervisor.cpuUsage / _cpuLimit
             )}
-        meter.counterBuilder("system.cpu.time")
+        /*meter.counterBuilder("system.cpu.time")
             .setDescription("Amount of CPU time spent by the host")
             .setUnit("s")
             .buildWithCallback(::collectCpuTime)
@@ -175,7 +175,7 @@ public class SimHost(
             .setDescription("Amount of energy used by the CPU")
             .setUnit("J")
             .ofDoubles()
-            .buildWithCallback { result -> result.record(machine.energyUsage) }
+            .buildWithCallback { result -> result.record(machine.energyUsage) }*/
         meter.counterBuilder("system.time")
             .setDescription("The uptime of the host")
             .setUnit("s")

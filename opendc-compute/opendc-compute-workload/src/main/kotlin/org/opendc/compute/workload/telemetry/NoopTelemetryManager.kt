@@ -25,6 +25,7 @@ package org.opendc.compute.workload.telemetry
 import io.opentelemetry.api.metrics.MeterProvider
 import org.opendc.compute.service.scheduler.ComputeScheduler
 import org.opendc.compute.workload.topology.HostSpec
+import org.opendc.telemetry.compute.table.StorageInfo
 
 /**
  * A [TelemetryManager] that does nothing.
@@ -33,4 +34,6 @@ public class NoopTelemetryManager : TelemetryManager {
     override fun createMeterProvider(host: HostSpec): MeterProvider = MeterProvider.noop()
 
     override fun createMeterProvider(scheduler: ComputeScheduler): MeterProvider = MeterProvider.noop()
+
+    override fun createMeterProvider(storage: StorageInfo): MeterProvider = MeterProvider.noop()
 }

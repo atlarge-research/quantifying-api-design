@@ -42,5 +42,5 @@ public interface SimulationController {
      *
      * @return the amount of delay-time that this Dispatcher's clock has been forwarded in milliseconds.
      */
-    public fun advanceUntilIdle(): Long
+    public fun advanceUntilIdle(scope : SimulationCoroutineScope): Long
 }

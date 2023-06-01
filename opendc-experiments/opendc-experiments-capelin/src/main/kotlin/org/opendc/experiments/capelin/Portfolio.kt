@@ -94,7 +94,7 @@ abstract class Portfolio(name: String) : Experiment(name) {
     /**
      * Perform a single trial for this portfolio.
      */
-    override fun doRun(repeat: Int): Unit = runBlockingSimulation {
+    override fun doRun(repeat: Int): Unit = runBlockingSimulation(true) {
         val seeder = Random(repeat.toLong())
 
         val performanceInterferenceModel = if (operationalPhenomena.hasInterference)

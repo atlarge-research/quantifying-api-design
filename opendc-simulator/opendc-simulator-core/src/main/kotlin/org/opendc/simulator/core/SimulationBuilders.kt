@@ -31,14 +31,14 @@ import kotlin.coroutines.EmptyCoroutineContext
  * Executes a [body] inside an immediate execution dispatcher.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-public fun runBlockingSimulation(context: CoroutineContext = EmptyCoroutineContext, body: suspend SimulationCoroutineScope.() -> Unit) {
+public fun runBlockingSimulation(stop :Boolean=true, context: CoroutineContext = EmptyCoroutineContext, body: suspend SimulationCoroutineScope.() -> Unit) {
     val (safeContext, dispatcher) = context.checkArguments()
     val startingJobs = safeContext.activeJobs()
     val scope = SimulationCoroutineScope(safeContext)
     val deferred = scope.async {
         body(scope)
     }
-    dispatcher.advanceUntilIdle()
+    scope.advanceUntilIdle(scope)
     deferred.getCompletionExceptionOrNull()?.let {
         throw it
     }
@@ -51,14 +51,14 @@ public fun runBlockingSimulation(context: CoroutineContext = EmptyCoroutineConte
 /**
  * Convenience method for calling [runBlockingSimulation] on an existing [SimulationCoroutineScope].
  */
-public fun SimulationCoroutineScope.runBlockingSimulation(block: suspend SimulationCoroutineScope.() -> Unit): Unit =
-    runBlockingSimulation(coroutineContext, block)
+public fun SimulationCoroutineScope.runBlockingSimulation(block: suspend SimulationCoroutineScope.() -> Unit, stop: Boolean): Unit =
+    runBlockingSimulation(stop, coroutineContext, block)
 
 /**
  * Convenience method for calling [runBlockingSimulation] on an existing [SimulationCoroutineDispatcher].
  */
-public fun SimulationCoroutineDispatcher.runBlockingSimulation(block: suspend SimulationCoroutineScope.() -> Unit): Unit =
-    runBlockingSimulation(this, block)
+public fun SimulationCoroutineDispatcher.runBlockingSimulation(block: suspend SimulationCoroutineScope.() -> Unit, stop: Boolean): Unit =
+    runBlockingSimulation(stop, this, block)
 
 private fun CoroutineContext.checkArguments(): Pair<CoroutineContext, SimulationController> {
     val dispatcher = get(ContinuationInterceptor).run {

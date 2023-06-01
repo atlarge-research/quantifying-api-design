@@ -44,4 +44,6 @@ public interface ComputeMonitor {
      * Record an entry with the specified [reader].
      */
     public fun record(reader: ServiceTableReader) {}
+
+    public fun record(reader: StorageTableReader) {}
 }

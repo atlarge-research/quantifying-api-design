@@ -98,13 +98,16 @@ public class SimulationCoroutineDispatcher : CoroutineDispatcher(), SimulationCo
         return result
     }
 
-    override fun advanceUntilIdle(): Long {
+    override fun advanceUntilIdle(scope : SimulationCoroutineScope): Long {
         val queue = queue
         val clock = _clock
         val oldTime = clock.time
 
         while (true) {
-            val current = queue.poll() ?: break
+            val current = queue.poll()
+                if (current == null){
+                    break
+                }
 
             // If the scheduled time is 0 (immediate) use current virtual time
             if (current.time != 0L) {

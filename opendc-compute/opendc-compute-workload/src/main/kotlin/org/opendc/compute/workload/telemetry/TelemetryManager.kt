@@ -25,7 +25,7 @@ package org.opendc.compute.workload.telemetry
 import io.opentelemetry.api.metrics.MeterProvider
 import org.opendc.compute.service.scheduler.ComputeScheduler
 import org.opendc.compute.workload.topology.HostSpec
-
+import org.opendc.telemetry.compute.table.StorageInfo
 /**
  * Helper class to manage the telemetry for a [ComputeServiceHelper] instance.
  */
@@ -39,4 +39,6 @@ public interface TelemetryManager {
      * Construct a [MeterProvider] for the specified [HostSpec].
      */
     public fun createMeterProvider(host: HostSpec): MeterProvider
+
+    public fun createMeterProvider(storage: StorageInfo): MeterProvider
 }

@@ -40,6 +40,7 @@ public class ComputeMetricAggregator {
     private val _service = ServiceAggregator()
     private val _hosts = mutableMapOf<String, HostAggregator>()
     private val _servers = mutableMapOf<String, ServerAggregator>()
+    private val _storages = mutableMapOf<String, StorageAggregator>()
 
     /**
      * Process the specified [metrics] for this cycle.
@@ -48,6 +49,7 @@ public class ComputeMetricAggregator {
         val service = _service
         val hosts = _hosts
         val servers = _servers
+        val tasks = _storages
 
         for (metric in metrics) {
             val resource = metric.resource
@@ -58,9 +60,12 @@ public class ComputeMetricAggregator {
                     val points = metric.doubleGaugeData.points
                     service._migrations = points.map { it.attributes[AttributeKey.longKey("migration.pods")]!! }.sum()
                     service._migrationsImprovement = points.sumOf { it.value }
-                    service._migrationsPenalty = points.map { it.attributes[AttributeKey.longKey("migration.penalty")]!! }.sum()
-                    service._migrationsOversubscription = points.map { it.attributes[AttributeKey.doubleKey("migration.oversubscription")]!! }.sum()
+                    service._migrationsPenalty =
+                        points.map { it.attributes[AttributeKey.longKey("migration.penalty")]!! }.sum()
+                    service._migrationsOversubscription =
+                        points.map { it.attributes[AttributeKey.doubleKey("migration.oversubscription")]!! }.sum()
                 }
+
                 "migration.attempts" -> {
                     for (point in metric.longSumData.points) {
                         when (point.attributes[RESULT_KEY]) {
@@ -81,6 +86,7 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "scheduler.servers" -> {
                     for (point in metric.longSumData.points) {
                         when (point.attributes[STATE_KEY]) {
@@ -89,6 +95,7 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "scheduler.attempts" -> {
                     for (point in metric.longSumData.points) {
                         when (point.attributes[RESULT_KEY]) {
@@ -113,6 +120,7 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "system.cpu.limit" -> {
                     val agg = getHost(hosts, resource) ?: continue
 
@@ -127,18 +135,22 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "system.cpu.usage" -> {
                     val agg = getHost(hosts, resource) ?: continue
                     agg._cpuUsage = metric.doubleGaugeData.points.first().value
                 }
+
                 "system.cpu.demand" -> {
                     val agg = getHost(hosts, resource) ?: continue
                     agg._cpuDemand = metric.doubleGaugeData.points.first().value
                 }
+
                 "system.cpu.utilization" -> {
                     val agg = getHost(hosts, resource) ?: continue
                     agg._cpuUtilization = metric.doubleGaugeData.points.first().value
                 }
+
                 "system.cpu.time" -> {
                     val agg = getHost(hosts, resource) ?: continue
 
@@ -163,18 +175,23 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "system.power.usage" -> {
                     val agg = getHost(hosts, resource) ?: continue
                     agg._powerUsage = metric.doubleGaugeData.points.first().value
                 }
+
                 "system.power.total" -> {
                     val agg = getHost(hosts, resource) ?: continue
                     agg._powerTotal = metric.doubleSumData.points.first().value
                 }
+
                 "system.time" -> {
                     val agg = getHost(hosts, resource) ?: continue
 
                     for (point in metric.longSumData.points) {
+                        service.recordTimestamp(point)
+
                         val server = getServer(servers, point)
 
                         if (server != null) {
@@ -195,6 +212,7 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "system.time.boot" -> {
                     val agg = getHost(hosts, resource) ?: continue
 
@@ -209,6 +227,7 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "system.time.stop" -> {
                     for (point in metric.longGaugeData.points) {
                         val server = getServer(servers, point)
@@ -218,11 +237,28 @@ public class ComputeMetricAggregator {
                         }
                     }
                 }
+
                 "system.time.provision" -> {
                     for (point in metric.longGaugeData.points) {
                         val server = getServer(servers, point) ?: continue
                         server.recordTimestamp(point)
                         server._provisionTime = Instant.ofEpochMilli(point.value)
+                    }
+                }
+
+                "storage.buffer_size" -> {
+                    for (point in metric.longGaugeData.points) {
+                        val storage = getStorage(tasks, point) ?: continue
+                        storage.recordTimestamp(point)
+                        storage._bufferSize = point.value
+                    }
+                }
+
+                "storage.idle_time" -> {
+                    for (point in metric.longGaugeData.points) {
+                        val storage = getStorage(tasks, point) ?: continue
+                        storage.recordTimestamp(point)
+                        storage._idleTime = point.value
                     }
                 }
             }
@@ -243,6 +279,10 @@ public class ComputeMetricAggregator {
         for (server in _servers.values) {
             monitor.record(server)
             server.reset()
+        }
+
+        for (storage in _storages.values) {
+            monitor.record(storage)
         }
     }
 
@@ -269,6 +309,15 @@ public class ComputeMetricAggregator {
             null
         }
     }
+
+    private fun getStorage(tasks: MutableMap<String, StorageAggregator>, point: PointData): StorageAggregator? {
+            val id = point.attributes[AttributeKey.stringKey("storage.server.id")]
+            return if (id != null) {
+                tasks.getOrPut(id) { StorageAggregator(point.attributes) }
+            } else {
+                null
+            }
+        }
 
     /**
      * An aggregator for service metrics before they are reported.
@@ -562,6 +611,37 @@ public class ComputeMetricAggregator {
         /**
          * Record the timestamp of a [point] for this aggregator.
          */
+        fun recordTimestamp(point: PointData) {
+            _timestamp = Instant.ofEpochMilli(point.epochNanos / 1_000_000L) // ns to ms
+        }
+    }
+
+    internal class StorageAggregator(attributes: Attributes) : StorageTableReader {
+        /**
+         * The static information about this server.
+         */
+        override val storage = StorageInfo(
+            attributes[AttributeKey.longKey("storage.server.num")]!!,
+            attributes[AttributeKey.longKey("storage.cpu.count")]!!,
+            attributes[AttributeKey.doubleKey("storage.cpu.speed")]!!,
+        )
+
+        private var _timestamp = Instant.MIN
+        override val timestamp: Instant
+            get() = _timestamp
+
+        override val serverId: String
+            get() = _serverId
+        @JvmField var _serverId: String = attributes[AttributeKey.stringKey("storage.server.id")]!!
+
+        override val bufferSize: Long
+            get() = _bufferSize
+        @JvmField var _bufferSize: Long = 0
+
+        override val idleTime: Long
+            get() = _idleTime
+        @JvmField var _idleTime: Long = 0
+
         fun recordTimestamp(point: PointData) {
             _timestamp = Instant.ofEpochMilli(point.epochNanos / 1_000_000L) // ns to ms
         }

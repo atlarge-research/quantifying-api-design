@@ -121,3 +121,5 @@ opendc-experiments/oversubscription/src/main/resources/trace
 opendc-experiments/oversubscription/output
 opendc-experiments/reservation/src/main/resources/trace
 opendc-experiments/reservation/output
+**/scheduling-apis/**/trace/
+**/scheduling-apis/**/output/

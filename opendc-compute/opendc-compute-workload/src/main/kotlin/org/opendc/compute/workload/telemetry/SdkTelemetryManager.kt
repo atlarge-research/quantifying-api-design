@@ -22,6 +22,7 @@
 
 package org.opendc.compute.workload.telemetry
 
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.metrics.MeterProvider
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
@@ -35,6 +36,7 @@ import io.opentelemetry.semconv.resource.attributes.ResourceAttributes
 import org.opendc.compute.service.scheduler.ComputeScheduler
 import org.opendc.compute.workload.topology.HostSpec
 import org.opendc.telemetry.compute.*
+import org.opendc.telemetry.compute.table.StorageInfo
 import org.opendc.telemetry.sdk.toOtelClock
 import java.time.Clock
 
@@ -93,6 +95,16 @@ public class SdkTelemetryManager(private val clock: Clock) : TelemetryManager, A
             .put(HOST_ARCH, ResourceAttributes.HostArchValues.AMD64)
             .put(HOST_NCPUS, host.model.cpus.size)
             .put(HOST_MEM_CAPACITY, host.model.memory.sumOf { it.size })
+            .build()
+
+        return createMeterProvider(resource)
+    }
+
+    override fun createMeterProvider(storage: StorageInfo): MeterProvider {
+        val resource = Resource.builder()
+            .put(AttributeKey.longKey("storage.server.num"), storage.serversNum)
+            .put(AttributeKey.longKey("storage.cpu.count"), storage.serversCpuCount)
+            .put(AttributeKey.doubleKey("storage.cpu.speed"), storage.serversCpuSpeed)
             .build()
 
         return createMeterProvider(resource)

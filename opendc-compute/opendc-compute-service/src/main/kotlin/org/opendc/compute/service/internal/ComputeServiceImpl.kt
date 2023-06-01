@@ -161,7 +161,7 @@ internal class ComputeServiceImpl(
         val upState = Attributes.of(AttributeKey.stringKey("state"), "up")
         val downState = Attributes.of(AttributeKey.stringKey("state"), "down")
 
-        meter.upDownCounterBuilder("scheduler.hosts")
+        /*meter.upDownCounterBuilder("scheduler.hosts")
             .setDescription("Number of hosts registered with the scheduler")
             .setUnit("1")
             .buildWithCallback { result ->
@@ -170,7 +170,7 @@ internal class ComputeServiceImpl(
 
                 result.record(available, upState)
                 result.record(total - available, downState)
-            }
+            }*/
 
         meter.gaugeBuilder("system.time.provision")
             .setDescription("The most recent timestamp where the server entered a provisioned state")
