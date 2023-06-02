@@ -4,7 +4,7 @@
 
 # Evaluation of Datacenter Scheduler Programming Abstractions
 
-This repository contains the evaluation code and experiments written in Kotlin for the research work titled "The Cost of Simplicity: Understanding Datacenter Scheduler Programming Abstractions" presented at the Middleware 2023 conference. The work investigates the performance impact of various datacenter scheduler programming abstractions.
+This repository contains the evaluation code and experiments written in Kotlin for the research work that investigates the performance impact of various datacenter scheduler programming abstractions.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](/LICENSE.txt)
 [![Documentation](https://img.shields.io/badge/docs-master-green.svg)](./docs)
