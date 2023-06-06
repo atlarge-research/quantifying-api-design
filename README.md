@@ -50,7 +50,7 @@ To plot the experiment results, please follow these steps:
 
 3. Set up the trace data by copying the corresponding trace files to the `./plot/trace/<dataset>` directory. Rename the trace file to `meta.parquet`. For example, if you are working with the Azure dataset, the path would be `./plot/trace/azure/meta.parquet`.
 
-4. Prepare the input folder for the experiments you have run. Copy the experiment output to the path `./plot/input/<experiment>/<dataset>`. For instance, if you ran the migrations experiment using the Azure dataset, the path would be `./plot/input/migrations/azure`.
+4. Prepare the input folder for the experiments you have run. Copy the experiment output to the path `./plot/input/<experiment>/<dataset>`. To locate the output of the experiments, you can find them under the following directory structure: opendc-experiments/studying-apis/<experiment>/output/<dataset>. Each experiment and dataset combination will have its own corresponding folder under the output directory. For instance, if you ran the migrations experiment using the Azure dataset, the path would be `./plot/input/migrations/azure`.
 
 5. Choose one of the available scripts located in the `./plot/script` directory based on the experiment type. The available scripts are:
     - `migrations_plot_results.py`
