@@ -37,6 +37,41 @@ These steps ensure that the traces are properly organized and available for the 
 1. Open the terminal and navigate to the `opendc` project directory.
 2. Run the command `./gradlew :opendc-experiments:<experiment>:experiment` to compile and run the desired experiment.
 
+## Plotting Experiment Results
+
+To plot the experiment results, please follow these steps:
+
+1. Install the required Python packages by running the following command:
+   ```
+   pip install -r plot/script/requirements.txt
+   ```
+
+2. Ensure that all the necessary files for plotting are located under the `./plot` folder in the repository.
+
+3. Set up the trace data by copying the corresponding trace files to the `./plot/trace/<dataset>` directory. Rename the trace file to `meta.parquet`. For example, if you are working with the Azure dataset, the path would be `./plot/trace/azure/meta.parquet`.
+
+4. Prepare the input folder for the experiments you have run. Copy the experiment output to the path `./plot/input/<experiment>/<dataset>`. For instance, if you ran the migrations experiment using the Azure dataset, the path would be `./plot/input/migrations/azure`.
+
+5. Choose one of the available scripts located in the `./plot/script` directory based on the experiment type. The available scripts are:
+    - `migrations_plot_results.py`
+    - `reservations_plot_results.py`
+    - `metadata_plot_results.py`
+    - `metadata_plot_preview.py`
+
+6. Run the selected script with the desired dataset parameter. For example, to plot the results for the Azure dataset using the reservations experiment, run the following command:
+   ```
+   python3 ./plot/script/reservations_plot_results.py azure
+   ```
+
+7. The generated plots and visualizations will be available in the `./plot/output/<experiment>/<dataset>` directory.
+
+Please note that the dataset parameter is mandatory when running the plotting script, as it determines which dataset the script will process.
+
+Feel free to explore the generated plots and visualizations to analyze and interpret the experiment results.
+
+That's it! You should now be able to plot your experiment results using the provided scripts and instructions.
+
+
 ## OpenDC
 The evaluation experiments are performed using OpenDC, an open-source data center simulation platform. OpenDC allows for accurate and realistic simulations of data center environments, enabling thorough evaluation and analysis of various scheduling APIs and their impact on performance.
 
