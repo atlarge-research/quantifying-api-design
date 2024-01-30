@@ -34,8 +34,8 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
         //1.5F,
         //1.7F
         3F,
-        //4F,
-        //5F,
+        4F,
+        5F,
     )
 
     private val vmPlacements by anyOf(emptyMap<String, String>())
@@ -47,7 +47,7 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
         true,
     )
     private val oversubscriptionApi: Boolean by anyOf(
-        //true,
+        true,
         false,
     )
     val clusterType : String by anyOf(
