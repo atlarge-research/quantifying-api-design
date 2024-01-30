@@ -11,12 +11,20 @@ This repository contains the evaluation code and experiments written in Kotlin f
 [![GitHub release](https://img.shields.io/github/release/atlarge-research/opendc)](https://github.com/atlarge-research/opendc/releases)
 [![Build](https://github.com/atlarge-research/opendc/actions/workflows/build.yml/badge.svg)](https://github.com/atlarge-research/opendc/actions/workflows/build.yml)
 
+### Prerequisites
+- Any desktop Linux distribution with build tools installed. For example, `build-essential` package on Ubuntu.
+- Java 17 or greater
+- Python 3.11 (We recommend conda, virtualenv, or a similar environment)
+
+### Simplified instructions
+- Run `./download-traces.sh`. This will download all required traces from Zenodo and copy them to the relevant directories for experiments.
+- Setup a python 3.11 virtual environment. Install dependencies using `pip install -r plot/scripts/requirements.txt`.
+- Use `./run-experiments.sh` to run the simulations and plot the results.
+- Figure 7 is `plot/output/migrations-results-packing-azure.pdf`. Figure 8 is `plot/output/migrations-results-totaltime-azure.pdf`. Figure 10 is `plot/output/metadata-results-ibm.pdf`.
+
 ## Getting Started
 
-The code for all the specific experiments can be found in the `opendc-experiments/studying-apis` directory of the repository. To run the experiments, make sure to place the relevant traces in the corresponding experiment folder within this directory. For example, an example trace bitbrains-small is provided in the traces directory for your reference.
-
-### Prerequisites
-- Kotlin and Gradle should be installed on your machine.
+Detailed instructions to build individual experiments and modify them start here. The code for all the specific experiments can be found in the `opendc-experiments/studying-apis` directory of the repository. To run the experiments, make sure to place the relevant traces in the corresponding experiment folder within this directory. For example, an example trace bitbrains-small is provided in the traces directory for your reference.
 
 ### Setup Traces
 1. Clone the repository to your local machine.
@@ -35,7 +43,7 @@ These steps ensure that the traces are properly organized and available for the 
 
 ### Compile and Run
 1. Open the terminal and navigate to the `opendc` project directory.
-2. Run the command `./gradlew :opendc-experiments:<experiment>:experiment` to compile and run the desired experiment.
+2. Run the command `./gradlew :opendc-experiments:studying-apis:<experiment>:experiment` to compile and run the desired experiment.
 
 ## Plotting Experiment Results
 
