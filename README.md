@@ -12,9 +12,10 @@ This repository contains the evaluation code and experiments written in Kotlin f
 [![Build](https://github.com/atlarge-research/opendc/actions/workflows/build.yml/badge.svg)](https://github.com/atlarge-research/opendc/actions/workflows/build.yml)
 
 ### Prerequisites
+- An x86 machine with at least 16GB RAM.
 - Any desktop Linux distribution with build tools installed. For example, `build-essential` package on Ubuntu.
-- Java 17 or greater
-- Python 3.11 (We recommend conda, virtualenv, or a similar environment)
+- Java 17 or greater.
+- Python 3.11 (We recommend conda, virtualenv, or a similar environment).
 
 ### Simplified instructions
 - Run `./download-traces.sh`. This will download all required traces from Zenodo and copy them to the relevant directories for experiments.
