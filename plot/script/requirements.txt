@@ -17,7 +17,7 @@ pandas==1.5.0
 pathspec==0.10.1
 Pillow==9.2.0
 platformdirs==2.5.2
-pyarrow==9.0.0
+pyarrow
 Pygments==2.13.0
 pyparsing==3.0.9
 python-dateutil==2.8.2

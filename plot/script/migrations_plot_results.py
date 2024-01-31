@@ -269,7 +269,7 @@ def plot_results(
         )
         plt.savefig(path, bbox_inches="tight")
         print(f"Figure saved to disk at: {path}")
-    plt.show()
+#     plt.show()
     plt.close()
 
     _, ax = plt.subplots(1, 1)
@@ -299,7 +299,7 @@ def plot_results(
         )
         plt.savefig(path, bbox_inches="tight")
         print(f"Figure saved to disk at: {path}")
-    plt.show()
+#     plt.show()
     plt.close()
 
 

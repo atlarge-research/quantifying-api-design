@@ -205,7 +205,7 @@ def plot_results(
         path = f"{OUTPUT_DISK_PATH}/metadata-results-{dataset}.{OUTPUT_FORMAT}"
         plt.savefig(path, bbox_inches="tight")
         print(f"Figure saved to disk at: {path}")
-    plt.show()
+#     plt.show()
     plt.close()
 
 
@@ -225,7 +225,6 @@ if __name__ == "__main__":
         )
         results = load_times_steady(
             f"{INPUT_DISK_PATH}/metadata/{dataset}/server/api={api_activated}-servers={SERVERS_NUM}-cores={CORES_NUM}/data.parquet",
-            dataset,
         )
 
         # times
