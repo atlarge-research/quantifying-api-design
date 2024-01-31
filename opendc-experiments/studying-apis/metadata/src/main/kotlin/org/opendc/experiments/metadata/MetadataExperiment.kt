@@ -20,6 +20,7 @@ import org.opendc.simulator.core.SimulationCoroutineScope
 import org.opendc.telemetry.compute.table.StorageInfo
 import org.opendc.telemetry.sdk.metrics.export.CoroutineMetricReader
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.random.asKotlinRandom
 
 class MetadataExperiment : Experiment(name = "metadata") {
     private val logger = KotlinLogging.logger {}
@@ -46,7 +47,7 @@ class MetadataExperiment : Experiment(name = "metadata") {
     override fun doRun(repeat: Int) : Unit = runBlockingSimulation(stop, EmptyCoroutineContext, ::experiment)
 
     suspend fun experiment(scope : SimulationCoroutineScope){
-        val seeder = Random(0)
+        val seeder = Random(36542)
         val workload = workloadTrace.resolve(workloadLoader, seeder)
 
         val telemetry = SdkTelemetryManager(scope.clock)
@@ -68,6 +69,7 @@ class MetadataExperiment : Experiment(name = "metadata") {
             numCores = storageServerCores,
             speed = storageServerCoreSpeed,
             meterProvider = meterProvider,
+            randomSource = seeder.asKotlinRandom()
         )
         val runner = ComputeServiceHelper(
             scope,

@@ -78,7 +78,7 @@ def plot_results(
         {
             "legend.title_fontsize": TEXT_FONTSIZE,
             "font.size": TEXT_FONTSIZE,
-            "figure.figsize": (15 * cm, 7.2 * cm),
+            "figure.figsize": (14 * cm, 7.2 * cm),
             "text.usetex": True,
             "font.family": "libertine",
         }
@@ -162,13 +162,13 @@ def plot_results(
         title_fontsize=TEXT_FONTSIZE,
     )
 
-    ax.set_xlabel(f"Total time [{TIME_UNIT_ACRONYM[TIME_UNIT]}]")
+    ax.set_xlabel(f"Total time [m]")
 
     left, right = axes
     left.annotate(
         "",
-        xy=(2.2e14 / 3.6e12, 1.5e11),
-        xytext=(2.2e14 / 3.6e12, 2.35e11),
+        xy=(2.2e14 / 3.6e12, 1.9e11),
+        xytext=(2.2e14 / 3.6e12, 2.6e11),
         arrowprops=dict(
             facecolor="#CDEB8B",
             shrink=0.05,
@@ -180,14 +180,14 @@ def plot_results(
     left.text(
         2.25e14 / 3.6e12,
         1.7e11,
-        r"\textbf{85GB\\buffer size\\(36\%)}",
+        r"\textbf{70GB\\buffer size\\(27\%)}",
         fontdict={"size": ARROW_FONTSIZE},
     )
 
     right.annotate(
         "",
-        xy=(7.8e1, 0.85),
-        xytext=(1.3e2, 0.85),
+        xy=(0.7e2, 0.5),
+        xytext=(1e2, 0.5),
         arrowprops=dict(
             facecolor="#CDEB8B",
             shrink=0.05,
@@ -196,7 +196,7 @@ def plot_results(
             headlength=LINEWIDTH * 4 * 1.5,
         ),
     )
-    right.text(1.45e2, 0.8, r"\textbf{52h\\(40\%)}", fontdict={"size": ARROW_FONTSIZE})
+    right.text(1.45e2, 0.5, r"\textbf{25m\\(25\%)}", fontdict={"size": ARROW_FONTSIZE})
 
     left.annotate("     ", xy=(-5, 1.5e11), annotation_clip=False)
     plt.subplots_adjust(wspace=0.4)

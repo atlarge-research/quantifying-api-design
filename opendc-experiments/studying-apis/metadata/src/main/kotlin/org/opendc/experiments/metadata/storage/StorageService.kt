@@ -9,12 +9,15 @@ import kotlinx.coroutines.channels.Channel
 import org.opendc.simulator.core.SimulationCoroutineScope
 import java.util.Collections.max
 import kotlin.math.max
+import kotlin.random.Random
+import kotlin.random.asKotlinRandom
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 
 
-public class StorageService(private val scope :SimulationCoroutineScope, private val numServers : Long, private val numCores : Long, private val speed : Double, meterProvider: MeterProvider){
+public class StorageService(private val scope :SimulationCoroutineScope, private val numServers : Long, private val numCores : Long, private val speed : Double, meterProvider: MeterProvider,
+            private val randomSource: Random){
     private val servers = mutableListOf<Server>()
 
     val meter = meterProvider.get("org.opendc.experiments.metadata")
@@ -41,7 +44,7 @@ public class StorageService(private val scope :SimulationCoroutineScope, private
             return
         }
 
-        val randServer = servers.random()
+        val randServer = servers.random(randomSource)
 
         randServer.Set(objectId, size)
         objectToServer[objectId] = randServer
