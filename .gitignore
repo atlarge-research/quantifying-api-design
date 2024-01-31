@@ -123,3 +123,5 @@ opendc-experiments/reservation/src/main/resources/trace
 opendc-experiments/reservation/output
 **/scheduling-apis/**/trace/**/*.parquet
 **/scheduling-apis/**/output/
+
+__pycache__
