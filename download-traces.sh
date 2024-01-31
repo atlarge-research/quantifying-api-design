@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# curl -L https://zenodo.org/api/records/7996316/files-archive -o trace_files.zip
-# mkdir -p trace_files
-# unzip trace_files.zip -d trace_files
+curl -L https://zenodo.org/api/records/7996316/files-archive -o trace_files.zip
+mkdir -p trace_files
+unzip trace_files.zip -d trace_files
 
 declare -a traces=("azure" "bitbrains" "google")
 declare -a experiments=("reservations" "migrations")
