@@ -2,7 +2,7 @@
 
 ./gradlew :opendc-experiments:studying-apis:migrations:experiment --rerun-tasks
 cp trace_files/azure.parquet plot/trace/azure/meta.parquet
-cp -r opendc-experiments/studying-apis/migrations/output/azure/* input/migrations/azure/.
+cp -r opendc-experiments/studying-apis/migrations/output/azure/* plot/input/migrations/azure/.
 
 ./gradlew :opendc-experiments:studying-apis:metadata:experiment --rerun-tasks
 cp trace_files/google_ibm.parquet plot/trace/ibm/tasks.parquet
