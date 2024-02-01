@@ -8,7 +8,7 @@ INPUT_DISK_PATH = "plot/input"
 TRACES_DISK_PATH = "plot/trace"
 
 MARKER_SIZE = 6
-MARKER_EVERY = 0.1
+MARKER_EVERY = 200
 LINEWIDTH = 1.0
 MARKERS = ["o", "*", "s"]
 TEXT_FONTSIZE = 25 * 0.65
