@@ -21,7 +21,7 @@ This repository contains the evaluation code and experiments written in Kotlin f
 - Run `./download-traces.sh`. This will download all required traces from Zenodo and copy them to the relevant directories for experiments.
 - Setup a python 3.11 virtual environment. Install dependencies using `pip install -r plot/script/requirements.txt`.
 - Use `./run-experiments.sh` to run the simulations and plot the results.
-- Figure 7 is `plot/output/migrations-results-packing-azure.pdf`. Figure 8 is `plot/output/migrations-results-totaltime-azure.pdf`. Figure 10 is `plot/output/metadata-results-ibm.pdf`.
+- Figure 7 in the paper is `plot/output/migrations-results-packing-azure.pdf`. Figure 8 is `plot/output/migrations-results-totaltime-azure.pdf`. Figure 10 is `plot/output/metadata-results-ibm.pdf`.
 
 ## Getting Started
 
