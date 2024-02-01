@@ -162,7 +162,7 @@ def plot_results(
         title_fontsize=TEXT_FONTSIZE,
     )
 
-    ax.set_xlabel(f"Total time [m]")
+    ax.set_xlabel(f"Total time [{TIME_UNIT_ACRONYM[TIME_UNIT]}]")
 
     left, right = axes
     left.annotate(
@@ -196,7 +196,7 @@ def plot_results(
             headlength=LINEWIDTH * 4 * 1.5,
         ),
     )
-    right.text(1.45e2, 0.5, r"\textbf{25m\\(25\%)}", fontdict={"size": ARROW_FONTSIZE})
+    right.text(1.45e2, 0.5, r"\textbf{26h\\(24\%)}", fontdict={"size": ARROW_FONTSIZE})
 
     left.annotate("     ", xy=(-5, 1.5e11), annotation_clip=False)
     plt.subplots_adjust(wspace=0.4)
