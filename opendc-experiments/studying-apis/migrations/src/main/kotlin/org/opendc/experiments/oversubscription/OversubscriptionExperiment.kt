@@ -26,7 +26,9 @@ public class OversubscriptionExperiment : Experiment(name = "oversubscription") 
         0.85F
     )
     val workloadTrace: TraceComputeWorkload by anyOf(
-        trace("azure", isNanoseconds = true)
+        trace("azure", isNanoseconds = true),
+//        trace("google", isNanoseconds = true),
+        trace("bitbrains", isNanoseconds = true)
     )
 
     val oversubscriptionRatio : Float by anyOf(
