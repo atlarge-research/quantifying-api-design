@@ -31,7 +31,7 @@ public class ComputeWorkloadLoader(private val baseDir: File, timeUnits :Int = 1
     /**
      * Read the metadata into a workload.
      */
-    private fun parseMeta(trace: Trace): List<VirtualMachine> {
+    private fun parseMeta(trace: Trace, isNanoseconds: Boolean): List<VirtualMachine> {
         val reader = checkNotNull(trace.getTable(TABLE_RESOURCES)).newReader()
 
         val idCol = reader.resolve(RESOURCE_ID)
@@ -50,8 +50,14 @@ public class ComputeWorkloadLoader(private val baseDir: File, timeUnits :Int = 1
 
                 val id = reader.get(idCol) as String
 
-                val submissionTime = reader.get(startTimeCol) as Instant
-                val endTime = reader.get(stopTimeCol) as Instant
+                var submissionTime = reader.get(startTimeCol) as Instant
+                var endTime = reader.get(stopTimeCol) as Instant
+
+                if (isNanoseconds){
+                    submissionTime = Instant.ofEpochMilli(submissionTime.toEpochMilli() / 1_000)
+                    endTime = Instant.ofEpochMilli(endTime.toEpochMilli() / 1_000)
+                }
+
                 val cpuCount = reader.getInt(cpuCountCol)
                 val cpuCapacity = reader.getDouble(cpuCapacityCol)
                 val cpuUtilization = reader.getDouble(cpuUtilizationCol)
@@ -90,14 +96,14 @@ public class ComputeWorkloadLoader(private val baseDir: File, timeUnits :Int = 1
     /**
      * Load the trace with the specified [name] and [format].
      */
-    public fun get(name: String, format: String): List<VirtualMachine> {
+    public fun get(name: String, format: String, isNanoseconds: Boolean): List<VirtualMachine> {
         return cache.computeIfAbsent(name) {
             val path = baseDir.resolve(it)
 
             logger.info { "Loading trace $it at $path" }
 
             val trace = Trace.open(path, format)
-            parseMeta(trace)
+            parseMeta(trace, isNanoseconds)
         }
     }
 

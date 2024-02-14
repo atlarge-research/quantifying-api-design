@@ -222,7 +222,6 @@ def plot_results(
         path = f"{OUTPUT_DISK_PATH}/reservations-results-{dataset}.{OUTPUT_FORMAT}"
         plt.savefig(path, bbox_inches="tight")
         print(f"Figure saved to disk at: {path}")
-    plt.show()
     plt.close()
 
     fig, axes = plt.subplots(1, 1)
@@ -327,10 +326,9 @@ def plot_results(
 
     if SAVE_TO_DISK:
         plt.savefig(
-            f"results/reservations/{dataset}/{prefix}{dataset}-slowdown-bars.pdf",
+            f"{OUTPUT_DISK_PATH}/reservations/{dataset}/{prefix}{dataset}-slowdown-bars.pdf",
             bbox_inches="tight",
         )
-    plt.show()
     plt.close()
 
 

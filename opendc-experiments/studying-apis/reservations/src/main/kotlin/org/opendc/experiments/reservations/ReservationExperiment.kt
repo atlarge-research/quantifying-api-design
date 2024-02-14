@@ -22,20 +22,20 @@ import org.opendc.experiments.reservations.trace.trace
 public class ReservationExperiment : Experiment(name = "reservation") {
     private val logger = KotlinLogging.logger {}
     val workloadTrace by anyOf(
-        trace("bitbrains"),
+        trace("azure", isNanoseconds = true),
         //trace("materna").sampleByLoad(1.0),
         //trace("solvinity").sampleByLoad(1.0),
     )
 
     // 1.0F, 0.5F, 0.25F, 0.0F
-    private val reservationRatio: Float by anyOf(0.0F)
-    // 0.7F, 0.75F,0.8F
-    private val utilization: Float by anyOf( 0.85F)
+    private val reservationRatio: Float by anyOf(0.0F, 0.5F, 1.0F)
+    // 0.75F, 0.8F,0.85F
+    private val utilization: Float by anyOf( 0.75F, 0.8F, 0.85F)
 
     private val workloadLoader = ComputeWorkloadLoader(File("src/main/resources/trace"))
 
     override fun doRun(repeat: Int) : Unit = runBlockingSimulation {
-        val seeder = Random(repeat.toLong())
+        val seeder = Random(36542)
         val workload = workloadTrace.resolve(workloadLoader, seeder)
         val exporter = ParquetComputeMetricExporter(
             File("output/${workloadTrace.name}"),
